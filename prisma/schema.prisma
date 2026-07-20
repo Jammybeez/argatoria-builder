@@ -15,18 +15,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  createdBy   User   @relation(fields: [createdById], references: [id])
-  createdById String
-
-  @@index([name])
-}
-
 model User {
   id            String    @id
   name          String //@db.Text
@@ -37,7 +25,7 @@ model User {
   updatedAt     DateTime  @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
-  posts         Post[]
+  armies        Army[]
 
   @@unique([email])
   @@map("user")
@@ -86,4 +74,114 @@ model Verification {
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Argatoria game data
+// ---------------------------------------------------------------------------
+
+enum UnitCategory {
+  BASIC
+  ELITE
+  RARE
+  UNIQUE
+  HERO
+}
+
+// PER_BASE: pointsCost is multiplied by the number of bases/models chosen.
+// FLAT: the unit is a single model at a fixed cost, quantity is always 1.
+enum CostType {
+  PER_BASE
+  FLAT
+}
+
+model Faction {
+  id                  String @id @default(cuid())
+  name                String @unique
+  tagline             String?
+  armySpecialRuleName String?
+  armySpecialRuleText String?
+
+  units  Unit[]
+  armies Army[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Unit {
+  id        String @id @default(cuid())
+  factionId String
+  faction   Faction @relation(fields: [factionId], references: [id], onDelete: Cascade)
+
+  name       String
+  category   UnitCategory
+  costType   CostType
+  pointsCost Int
+  minBases   Int? // minimum bases/models per unit entry, if the unit has one
+  isMage     Boolean @default(false)
+  isGeneral  Boolean @default(false)
+
+  // stat line
+  ld Int?
+  m  Int?
+  ws Int?
+  s  Int?
+  t  Int?
+  a  Int?
+  w  Int?
+
+  specialRules UnitSpecialRule[]
+  armyUnits    ArmyUnit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([factionId])
+}
+
+model UnitSpecialRule {
+  id     String @id @default(cuid())
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  name String
+  text String
+
+  @@index([unitId])
+}
+
+model Army {
+  id          String @id @default(cuid())
+  name        String
+  pointsLimit Int
+
+  factionId String
+  faction   Faction @relation(fields: [factionId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  units ArmyUnit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ArmyUnit {
+  id     String @id @default(cuid())
+  armyId String
+  army   Army   @relation(fields: [armyId], references: [id], onDelete: Cascade)
+
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id])
+
+  quantity Int    @default(1)
+  sortOrder Int   @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([armyId])
 }
