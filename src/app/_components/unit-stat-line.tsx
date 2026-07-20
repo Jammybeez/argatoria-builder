@@ -17,11 +17,12 @@ export function UnitStatLine({
   if (!hasStats) return null;
 
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-stone-300">
+    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-parchment-dim print:text-stone-800">
       {STATS.map(([label, key]) =>
         unit[key] === null ? null : (
           <span key={key}>
-            <span className="text-stone-500">{label}</span> {unit[key]}
+            <span className="text-bronze print:text-stone-600">{label}</span>{" "}
+            {unit[key]}
           </span>
         ),
       )}

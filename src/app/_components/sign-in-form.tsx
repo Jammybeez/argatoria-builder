@@ -38,20 +38,23 @@ export function SignInForm() {
   return (
     <form
       onSubmit={(e) => void submit(e)}
-      className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-stone-800 bg-stone-900 p-6"
+      className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-brass/40 bg-leather p-6"
     >
-      <h1 className="text-xl font-semibold text-stone-100">
+      <h1 className="font-display text-xl tracking-wide text-bronze-light uppercase">
         {mode === "sign-in" ? "Sign in" : "Create an account"}
       </h1>
 
       {mode === "sign-up" && (
         <div>
-          <label className="mb-1 block text-sm text-stone-400" htmlFor="name">
+          <label
+            className="mb-1 block text-sm text-parchment-dim"
+            htmlFor="name"
+          >
             Name
           </label>
           <input
             id="name"
-            className="w-full rounded-md border border-stone-700 bg-stone-950 px-3 py-2 text-stone-100"
+            className="w-full rounded-md border border-brass/50 bg-ink px-3 py-2 text-parchment"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -60,13 +63,16 @@ export function SignInForm() {
       )}
 
       <div>
-        <label className="mb-1 block text-sm text-stone-400" htmlFor="email">
+        <label
+          className="mb-1 block text-sm text-parchment-dim"
+          htmlFor="email"
+        >
           Email
         </label>
         <input
           id="email"
           type="email"
-          className="w-full rounded-md border border-stone-700 bg-stone-950 px-3 py-2 text-stone-100"
+          className="w-full rounded-md border border-brass/50 bg-ink px-3 py-2 text-parchment"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -74,13 +80,16 @@ export function SignInForm() {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm text-stone-400" htmlFor="password">
+        <label
+          className="mb-1 block text-sm text-parchment-dim"
+          htmlFor="password"
+        >
           Password
         </label>
         <input
           id="password"
           type="password"
-          className="w-full rounded-md border border-stone-700 bg-stone-950 px-3 py-2 text-stone-100"
+          className="w-full rounded-md border border-brass/50 bg-ink px-3 py-2 text-parchment"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           minLength={8}
@@ -88,12 +97,12 @@ export function SignInForm() {
         />
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-blood-light">{error}</p>}
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="rounded-md bg-amber-600 px-4 py-2 font-semibold text-stone-950 hover:bg-amber-500 disabled:opacity-50"
+        className="rounded-md bg-bronze-dark px-4 py-2 font-semibold text-parchment hover:bg-bronze disabled:opacity-50"
       >
         {isSubmitting
           ? "Please wait..."
@@ -104,7 +113,7 @@ export function SignInForm() {
 
       <button
         type="button"
-        className="text-sm text-stone-400 hover:text-stone-200"
+        className="text-sm text-parchment-dim hover:text-parchment"
         onClick={() =>
           setMode((m) => (m === "sign-in" ? "sign-up" : "sign-in"))
         }

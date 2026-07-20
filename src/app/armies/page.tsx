@@ -9,8 +9,12 @@ export default async function ArmiesPage() {
   if (!session) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-10">
-        <h1 className="mb-4 text-3xl font-bold text-amber-400">My Armies</h1>
-        <p className="text-stone-400">Sign in to view and build your armies.</p>
+        <h1 className="font-display mb-4 text-3xl tracking-wide text-bronze-light uppercase">
+          My Armies
+        </h1>
+        <p className="text-parchment-dim">
+          Sign in to view and build your armies.
+        </p>
       </main>
     );
   }
@@ -20,17 +24,19 @@ export default async function ArmiesPage() {
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-amber-400">My Armies</h1>
+        <h1 className="font-display text-3xl tracking-wide text-bronze-light uppercase">
+          My Armies
+        </h1>
         <Link
           href="/factions"
-          className="rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-stone-950 hover:bg-amber-500"
+          className="rounded-md bg-bronze-dark px-4 py-2 text-sm font-semibold text-parchment hover:bg-bronze"
         >
           + New Army
         </Link>
       </div>
 
       {armies.length === 0 ? (
-        <p className="text-stone-400">
+        <p className="text-parchment-dim">
           You haven&apos;t started an army yet. Pick a faction to begin.
         </p>
       ) : (
@@ -39,13 +45,15 @@ export default async function ArmiesPage() {
             <Link
               key={army.id}
               href={`/armies/${army.id}`}
-              className="flex items-center justify-between rounded-lg border border-stone-800 bg-stone-900 p-4 transition hover:border-amber-600"
+              className="flex items-center justify-between rounded-lg border border-brass/40 bg-leather p-4 transition hover:border-bronze"
             >
               <div>
-                <p className="font-semibold text-stone-100">{army.name}</p>
-                <p className="text-sm text-stone-400">{army.faction.name}</p>
+                <p className="font-semibold text-parchment">{army.name}</p>
+                <p className="text-sm text-parchment-dim">
+                  {army.faction.name}
+                </p>
               </div>
-              <p className="text-sm font-medium text-stone-300">
+              <p className="text-sm font-medium text-parchment-dim">
                 {army.totalPoints} / {army.pointsLimit} pts
               </p>
             </Link>

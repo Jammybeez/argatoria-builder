@@ -95,6 +95,18 @@ enum CostType {
   FLAT
 }
 
+// Sub-type for HERO-category units, used by army composition rules
+// (min heroes, exactly-one-General, Command Group / Champion / Mage caps).
+// Meaningless for non-HERO units, where it stays OTHER.
+enum HeroType {
+  GENERAL
+  COMMAND_GROUP
+  CHAMPION
+  MAGE
+  LEGENDARY_HERO
+  OTHER
+}
+
 model Faction {
   id                  String @id @default(cuid())
   name                String @unique
@@ -118,9 +130,23 @@ model Unit {
   category   UnitCategory
   costType   CostType
   pointsCost Int
-  minBases   Int? // minimum bases/models per unit entry, if the unit has one
-  isMage     Boolean @default(false)
-  isGeneral  Boolean @default(false)
+  minBases   Int? // default/minimum bases per unit instance, for PER_BASE units
+  maxBases   Int? // max bases per unit instance, for PER_BASE units
+  heroType   HeroType @default(OTHER) // only meaningful when category is HERO
+
+  // This unit can only be added to an army if a unit with this exact name is
+  // already in the roster (e.g. Truhlaks (Skeletons) requires the General
+  // "Lord Necromancer"; Larva of Nalharap requires the Mage "Black
+  // Shepherd"). Not restricted to Generals. Null = no requirement.
+  requiresHeroName String?
+
+  // This unit's normal `category` is overridden to `recategorizeToCategory`
+  // (for composition-rule counting and catalog/roster grouping) whenever a
+  // GENERAL with name `recategorizeGeneralName` is in the roster, e.g. Horned
+  // Warriors is normally ELITE but counts as BASIC under Lord of the Abyss.
+  // The unit is still purchasable at its normal category otherwise.
+  recategorizeGeneralName String?
+  recategorizeToCategory  UnitCategory?
 
   // stat line
   ld Int?
@@ -181,7 +207,62 @@ model ArmyUnit {
   quantity Int    @default(1)
   sortOrder Int   @default(0)
 
+  upgrades ArmyUnitUpgrade[]
+
   createdAt DateTime @default(now())
 
   @@index([armyId])
+}
+
+// Banner / Spell / Magic Item / Artefact — bought for HERO-category units.
+// Eligibility by hero sub-type: BANNER -> Command Group, SPELL & MAGIC_ITEM
+// -> Mage, ARTEFACT -> General.
+enum UpgradeType {
+  BANNER
+  SPELL
+  MAGIC_ITEM
+  ARTEFACT
+}
+
+model Upgrade {
+  id         String      @id @default(cuid())
+  type       UpgradeType
+  name       String
+  pointsCost Int
+
+  // Spells only: casting range in cm, and the Magic Test target (D6 roll
+  // must be <= this to succeed).
+  range        Int?
+  castingValue Int?
+
+  // Null = usable by any faction. Some items are faction-locked (e.g. the
+  // Sheol-morg-only Banner of God Seth).
+  factionName String?
+
+  // Free-text conditions too specific/bespoke to model structurally (e.g.
+  // "Sheol-morg, General other than Lord Necromancer only"). Shown as a
+  // caveat in the picker but not enforced.
+  requirementsText String?
+  effectText       String
+
+  armyUnitUpgrades ArmyUnitUpgrade[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+}
+
+model ArmyUnitUpgrade {
+  id         String   @id @default(cuid())
+  armyUnitId String
+  armyUnit   ArmyUnit @relation(fields: [armyUnitId], references: [id], onDelete: Cascade)
+
+  upgradeId String
+  upgrade   Upgrade @relation(fields: [upgradeId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([armyUnitId])
+  @@index([upgradeId])
 }

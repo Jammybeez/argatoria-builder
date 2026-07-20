@@ -3,4 +3,29 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-display: var(--font-cinzel), "Times New Roman", serif;
+
+  /* Scorched-leather / bronze palette — warm darks instead of neutral gray */
+  --color-ink: #16110c;
+  --color-ink-light: #1f1811;
+  --color-leather: #2a2015;
+  --color-leather-light: #3b2c1c;
+  --color-brass: #5c4527;
+  --color-bronze: #c1893f;
+  --color-bronze-light: #d9a55c;
+  --color-bronze-dark: #93641f;
+  --color-rust: #a04a29;
+  --color-blood: #a32a1f;
+  --color-blood-light: #c9482f;
+  --color-parchment: #ecdfc7;
+  --color-parchment-dim: #b6a685;
+}
+
+body {
+  background-image: radial-gradient(
+    ellipse 120% 80% at 50% -10%,
+    var(--color-leather) 0%,
+    var(--color-ink) 55%
+  );
+  background-attachment: fixed;
 }

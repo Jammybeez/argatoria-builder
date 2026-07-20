@@ -1,5 +1,6 @@
 import { armyRouter } from "~/server/api/routers/army";
 import { factionRouter } from "~/server/api/routers/faction";
+import { upgradeRouter } from "~/server/api/routers/upgrade";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -10,6 +11,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 export const appRouter = createTRPCRouter({
   faction: factionRouter,
   army: armyRouter,
+  upgrade: upgradeRouter,
 });
 
 // export type definition of API
