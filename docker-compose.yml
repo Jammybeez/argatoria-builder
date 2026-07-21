@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: argatoria
+      POSTGRES_PASSWORD: argatoria
+      POSTGRES_DB: argatoria
+    ports:
+      # Host port 5433, not 5432 — something else on this machine (a
+      # non-Docker Postgres, PID visible via `Get-Process -Id 7800` at time
+      # of writing) is already bound to 5432, so requests to 5432 hit that
+      # instead of this container.
+      - "5433:5432"
+    volumes:
+      - argatoria-db-data:/var/lib/postgresql/data
+
+volumes:
+  argatoria-db-data:
