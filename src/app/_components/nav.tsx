@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ThemeToggle } from "~/app/_components/theme-toggle";
 import { auth } from "~/server/better-auth";
 import { getSession } from "~/server/better-auth/server";
 
@@ -53,6 +54,7 @@ export async function Nav() {
               Sign in
             </Link>
           )}
+          <ThemeToggle />
         </nav>
       </div>
     </header>

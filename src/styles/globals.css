@@ -5,7 +5,12 @@
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-display: var(--font-cinzel), "Times New Roman", serif;
 
-  /* Scorched-leather / bronze palette — warm darks instead of neutral gray */
+  /* Scorched-leather / bronze palette — warm darks instead of neutral gray.
+     These are the DEFAULT (dark theme) values. Every component references
+     these token names (bg-ink, text-parchment, etc.) rather than raw
+     Tailwind colors, so the light theme below only needs to redefine the
+     custom properties themselves — no component ever needs to know which
+     theme is active. */
   --color-ink: #16110c;
   --color-ink-light: #1f1811;
   --color-leather: #2a2015;
@@ -19,6 +24,29 @@
   --color-blood-light: #c9482f;
   --color-parchment: #ecdfc7;
   --color-parchment-dim: #b6a685;
+}
+
+/* Light theme — sun-bleached parchment/paper instead of scorched leather.
+   Token ROLES stay the same (ink/ink-light = page background, leather =
+   card surfaces, parchment = primary text, bronze = accent), but several
+   values invert in lightness so contrast still holds: parchment (text)
+   goes from light-on-dark to dark-on-light, and bronze-light (headings)
+   goes from a pale gold to a deep rust-brown since pale gold text is
+   unreadable on a light background. */
+:root[data-theme="light"] {
+  --color-ink: #f2e8d5;
+  --color-ink-light: #ece0c4;
+  --color-leather: #e4d3ab;
+  --color-leather-light: #d8c193;
+  --color-brass: #a9895e;
+  --color-bronze: #a5661f;
+  --color-bronze-light: #7a4a15;
+  --color-bronze-dark: #8a5a1f;
+  --color-rust: #8a3324;
+  --color-blood: #a3291f;
+  --color-blood-light: #b8341f;
+  --color-parchment: #2a1f14;
+  --color-parchment-dim: #6b5738;
 }
 
 body {
