@@ -34,18 +34,37 @@ export async function Nav() {
             </Link>
           )}
           {session ? (
-            <form>
-              <button
-                className="rounded-md border border-brass/50 bg-leather px-3 py-1.5 text-parchment hover:bg-leather-light"
-                formAction={async () => {
-                  "use server";
-                  await auth.api.signOut({ headers: await headers() });
-                  redirect("/");
-                }}
-              >
-                Sign out ({session.user.name})
-              </button>
-            </form>
+            <div className="flex items-center gap-2">
+              {session.user.image && (
+                // eslint-disable-next-line @next/next/no-img-element -- external OAuth-provider avatar, not worth a next/image remotePatterns allowlist
+                <img
+                  src={session.user.image}
+                  alt={session.user.name}
+                  referrerPolicy="no-referrer"
+                  className="h-7 w-7 rounded-full border-2 border-brass/50"
+                  style={
+                    session.user.accentColor
+                      ? {
+                          borderColor: session.user.accentColor,
+                          boxShadow: `0 0 6px 1px ${session.user.accentColor}`,
+                        }
+                      : undefined
+                  }
+                />
+              )}
+              <form>
+                <button
+                  className="rounded-md border border-brass/50 bg-leather px-3 py-1.5 text-parchment hover:bg-leather-light"
+                  formAction={async () => {
+                    "use server";
+                    await auth.api.signOut({ headers: await headers() });
+                    redirect("/");
+                  }}
+                >
+                  Sign out ({session.user.name})
+                </button>
+              </form>
+            </div>
           ) : (
             <Link
               href="/sign-in"

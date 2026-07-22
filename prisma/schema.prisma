@@ -21,6 +21,10 @@ model User {
   email         String
   emailVerified Boolean   @default(false)
   image         String? //@db.Text
+  // Discord's profile accent color (hex, e.g. "#5865f2"), used for a border
+  // glow next to the avatar. Null for Google sign-ins and Discord users who
+  // haven't set one.
+  accentColor   String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
   sessions      Session[]

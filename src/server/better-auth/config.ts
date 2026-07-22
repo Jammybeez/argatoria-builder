@@ -11,6 +11,15 @@ export const auth = betterAuth({
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
+  user: {
+    additionalFields: {
+      accentColor: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+    },
+  },
   socialProviders: {
     ...(env.BETTER_AUTH_GOOGLE_CLIENT_ID && env.BETTER_AUTH_GOOGLE_CLIENT_SECRET
       ? {
@@ -28,6 +37,12 @@ export const auth = betterAuth({
             clientId: env.BETTER_AUTH_DISCORD_CLIENT_ID,
             clientSecret: env.BETTER_AUTH_DISCORD_CLIENT_SECRET,
             redirectURI: `${baseURL}/api/auth/callback/discord`,
+            mapProfileToUser: (profile) => ({
+              accentColor:
+                profile.accent_color != null
+                  ? `#${profile.accent_color.toString(16).padStart(6, "0")}`
+                  : undefined,
+            }),
           },
         }
       : {}),
