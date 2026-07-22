@@ -4,7 +4,10 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { env } from "~/env";
 import { db } from "~/server/db";
 
+const baseURL = env.BETTER_AUTH_URL ?? "http://localhost:3000";
+
 export const auth = betterAuth({
+  baseURL,
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
@@ -17,7 +20,7 @@ export const auth = betterAuth({
           google: {
             clientId: env.BETTER_AUTH_GOOGLE_CLIENT_ID,
             clientSecret: env.BETTER_AUTH_GOOGLE_CLIENT_SECRET,
-            redirectURI: "http://localhost:3000/api/auth/callback/google",
+            redirectURI: `${baseURL}/api/auth/callback/google`,
           },
         }
       : {}),
@@ -27,7 +30,7 @@ export const auth = betterAuth({
           discord: {
             clientId: env.BETTER_AUTH_DISCORD_CLIENT_ID,
             clientSecret: env.BETTER_AUTH_DISCORD_CLIENT_SECRET,
-            redirectURI: "http://localhost:3000/api/auth/callback/discord",
+            redirectURI: `${baseURL}/api/auth/callback/discord`,
           },
         }
       : {}),
