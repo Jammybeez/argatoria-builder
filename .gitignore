@@ -49,3 +49,5 @@ dev-err.log
 
 # idea files
 .idea
+.vercel
+.env*
