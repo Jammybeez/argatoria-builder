@@ -40,9 +40,22 @@ export default async function ArmyViewPage({
     ...maraudersEntries,
   ];
 
+  // Second and later instances of the same unit (e.g. three separate
+  // purchases of Wolves, or a unit's own derived Marauders) repeat the exact
+  // same stat line and special rules — only the header line (name, badge,
+  // bases, points) differs, so only the first instance prints the full
+  // block. Upgrades are per-instance data, not invariant, so those always
+  // print regardless.
+  const seenUnitIds = new Set<string>();
+  const rosterEntriesWithDuplicateFlag = rosterEntries.map((entry) => {
+    const isDuplicateUnit = seenUnitIds.has(entry.unit.id);
+    seenUnitIds.add(entry.unit.id);
+    return { ...entry, isDuplicateUnit };
+  });
+
   const rosterByCategory = CATEGORY_ORDER.map((category) => ({
     category,
-    entries: rosterEntries.filter(
+    entries: rosterEntriesWithDuplicateFlag.filter(
       (au) => effectiveCategory(au.unit, presentGeneralNames) === category,
     ),
   })).filter((g) => g.entries.length > 0);
@@ -71,14 +84,21 @@ export default async function ArmyViewPage({
         <p className="text-parchment-dim print:text-stone-600">
           {army.faction.name}
         </p>
-        {army.faction.armySpecialRuleName && (
-          <p className="mt-2 text-sm text-parchment-dim print:text-stone-700">
-            <span className="font-semibold text-parchment print:text-stone-900">
-              {army.faction.armySpecialRuleName}:
-            </span>{" "}
-            {army.faction.armySpecialRuleText}
-          </p>
-        )}
+        {/* Sheol-morg's "armySpecialRuleText" is meta-instruction for
+            picking a Lord while building ("choose one of these three
+            Generals"), not a fixed rule like other factions have — the
+            chosen Lord's actual rule already prints under their own stat
+            block below, so repeating the generic prompt here is just
+            confusing once the army is finished. */}
+        {army.faction.armySpecialRuleName &&
+          army.faction.name !== "Sheol-morg" && (
+            <p className="mt-2 text-sm text-parchment-dim print:text-stone-700">
+              <span className="font-semibold text-parchment print:text-stone-900">
+                {army.faction.armySpecialRuleName}:
+              </span>{" "}
+              {army.faction.armySpecialRuleText}
+            </p>
+          )}
       </header>
 
       {rosterByCategory.length === 0 ? (
@@ -126,11 +146,13 @@ export default async function ArmyViewPage({
                       </span>
                     </div>
 
-                    <div className="mt-2">
-                      <UnitStatLine unit={au.unit} />
-                    </div>
+                    {!au.isDuplicateUnit && (
+                      <div className="mt-2">
+                        <UnitStatLine unit={au.unit} />
+                      </div>
+                    )}
 
-                    {au.unit.specialRules.length > 0 && (
+                    {!au.isDuplicateUnit && au.unit.specialRules.length > 0 && (
                       <ul className="mt-3 flex flex-col gap-1">
                         {au.unit.specialRules.map((rule) => (
                           <li

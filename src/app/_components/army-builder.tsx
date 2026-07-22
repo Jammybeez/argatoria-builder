@@ -313,6 +313,14 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
       return next;
     });
 
+  // Tracks a catalog "Add" click only until its optimistic row lands (which
+  // happens almost immediately), not until the network round trip finishes —
+  // react-query's mutation.isPending covers the whole round trip, which made
+  // the button look stuck long after the roster already updated.
+  const [pendingAddUnitIds, setPendingAddUnitIds] = useState<Set<string>>(
+    new Set(),
+  );
+
   const renameArmy = api.army.rename.useMutation({ onSuccess: invalidateArmy });
 
   // Optimistic: the new unit appears in the roster the instant "Add" is
@@ -353,6 +361,13 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
         );
       }
 
+      setPendingAddUnitIds((cur) => {
+        if (!cur.has(input.unitId)) return cur;
+        const next = new Set(cur);
+        next.delete(input.unitId);
+        return next;
+      });
+
       return { previous };
     },
     onError: (_err, _input, context) => {
@@ -365,14 +380,107 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
   const updateQty = api.army.updateUnitQuantity.useMutation({
     onSuccess: invalidateArmy,
   });
+  // Optimistic, mirroring addUnit: the roster row disappears the instant
+  // "Remove" is clicked rather than waiting on the mutation + refetch round
+  // trip. Rolled back on error.
   const removeUnit = api.army.removeUnit.useMutation({
-    onSuccess: invalidateArmy,
+    onMutate: async (input) => {
+      await utils.army.getById.cancel({ id: armyId });
+      const previous = utils.army.getById.getData({ id: armyId });
+
+      if (previous) {
+        utils.army.getById.setData(
+          { id: armyId },
+          {
+            ...previous,
+            units: previous.units.filter((au) => au.id !== input.armyUnitId),
+          },
+        );
+      }
+
+      return { previous };
+    },
+    onError: (_err, _input, context) => {
+      if (context?.previous) {
+        utils.army.getById.setData({ id: armyId }, context.previous);
+      }
+    },
+    onSettled: invalidateArmy,
   });
+  // Optimistic, same pattern as addUnit. The server still enforces hero
+  // caps / faction locks / duplicate-magic-item rules, so a rejected add
+  // rolls back here same as any other error.
   const addUpgrade = api.army.addUpgrade.useMutation({
-    onSuccess: invalidateArmy,
+    onMutate: async (input) => {
+      await utils.army.getById.cancel({ id: armyId });
+      const previous = utils.army.getById.getData({ id: armyId });
+      const upgrade = upgradeCatalogQuery.data?.find(
+        (u) => u.id === input.upgradeId,
+      );
+
+      if (previous && upgrade) {
+        utils.army.getById.setData(
+          { id: armyId },
+          {
+            ...previous,
+            units: previous.units.map((au) =>
+              au.id === input.armyUnitId
+                ? {
+                    ...au,
+                    upgrades: [
+                      ...au.upgrades,
+                      {
+                        id: `optimistic-${Date.now()}`,
+                        armyUnitId: input.armyUnitId,
+                        upgradeId: input.upgradeId,
+                        createdAt: new Date(),
+                        upgrade,
+                      },
+                    ],
+                  }
+                : au,
+            ),
+          },
+        );
+      }
+
+      return { previous };
+    },
+    onError: (_err, _input, context) => {
+      if (context?.previous) {
+        utils.army.getById.setData({ id: armyId }, context.previous);
+      }
+    },
+    onSettled: invalidateArmy,
   });
   const removeUpgrade = api.army.removeUpgrade.useMutation({
-    onSuccess: invalidateArmy,
+    onMutate: async (input) => {
+      await utils.army.getById.cancel({ id: armyId });
+      const previous = utils.army.getById.getData({ id: armyId });
+
+      if (previous) {
+        utils.army.getById.setData(
+          { id: armyId },
+          {
+            ...previous,
+            units: previous.units.map((au) => ({
+              ...au,
+              upgrades: au.upgrades.filter(
+                (u) => u.id !== input.armyUnitUpgradeId,
+              ),
+            })),
+          },
+        );
+      }
+
+      return { previous };
+    },
+    onError: (_err, _input, context) => {
+      if (context?.previous) {
+        utils.army.getById.setData({ id: armyId }, context.previous);
+      }
+    },
+    onSettled: invalidateArmy,
   });
   const deleteArmy = api.army.delete.useMutation({
     onSuccess: () => router.push("/armies"),
@@ -411,9 +519,18 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
     ...maraudersEntries,
   ];
 
+  // Second and later instances of the same unit repeat the identical
+  // cost-per-base subtext — only shown once, on the first instance.
+  const seenUnitIds = new Set<string>();
+  const rosterEntriesWithDuplicateFlag = rosterEntries.map((entry) => {
+    const isDuplicateUnit = seenUnitIds.has(entry.unit.id);
+    seenUnitIds.add(entry.unit.id);
+    return { ...entry, isDuplicateUnit };
+  });
+
   const rosterByCategory = CATEGORY_ORDER.map((category) => ({
     category,
-    entries: rosterEntries.filter(
+    entries: rosterEntriesWithDuplicateFlag.filter(
       (au) => effectiveCategory(au.unit, presentGeneralNames) === category,
     ),
   })).filter((g) => g.entries.length > 0);
@@ -529,14 +646,16 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
                                   )
                                 )}
                               </p>
-                              <p className="text-parchment-dim text-xs">
-                                {au.isMarauders
-                                  ? "Free unit from a 16-base unit of the same type"
-                                  : formatCost(
-                                      au.unit.costType,
-                                      au.unit.pointsCost,
-                                    )}
-                              </p>
+                              {(au.isMarauders || !au.isDuplicateUnit) && (
+                                <p className="text-parchment-dim text-xs">
+                                  {au.isMarauders
+                                    ? "Free unit from a 16-base unit of the same type"
+                                    : formatCost(
+                                        au.unit.costType,
+                                        au.unit.pointsCost,
+                                      )}
+                                </p>
+                              )}
                             </div>
                             <div className="flex items-center gap-3">
                               {au.isMarauders ? (
@@ -683,10 +802,13 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
                       </div>
                       <button
                         className="bg-bronze-dark text-ink hover:bg-bronze rounded-md px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
-                        disabled={addUnit.isPending}
-                        onClick={() =>
-                          addUnit.mutate({ armyId: army.id, unitId: unit.id })
-                        }
+                        disabled={pendingAddUnitIds.has(unit.id)}
+                        onClick={() => {
+                          setPendingAddUnitIds((cur) =>
+                            new Set(cur).add(unit.id),
+                          );
+                          addUnit.mutate({ armyId: army.id, unitId: unit.id });
+                        }}
                       >
                         Add
                       </button>
