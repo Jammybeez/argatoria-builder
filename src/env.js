@@ -22,6 +22,10 @@ export const env = createEnv({
     BETTER_AUTH_GOOGLE_CLIENT_SECRET: z.string().optional(),
     BETTER_AUTH_DISCORD_CLIENT_ID: z.string().optional(),
     BETTER_AUTH_DISCORD_CLIENT_SECRET: z.string().optional(),
+    // Re-enables email/password sign-in for local testing without needing
+    // real Google/Discord OAuth apps configured. Only ever takes effect
+    // outside production (see config.ts), regardless of this value.
+    ENABLE_DEV_LOGIN: z.string().optional(),
     DATABASE_URL: z.string().url(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -50,6 +54,7 @@ export const env = createEnv({
     BETTER_AUTH_DISCORD_CLIENT_ID: process.env.BETTER_AUTH_DISCORD_CLIENT_ID,
     BETTER_AUTH_DISCORD_CLIENT_SECRET:
       process.env.BETTER_AUTH_DISCORD_CLIENT_SECRET,
+    ENABLE_DEV_LOGIN: process.env.ENABLE_DEV_LOGIN,
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
   },

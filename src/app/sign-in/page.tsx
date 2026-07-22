@@ -1,4 +1,5 @@
 import { SignInForm } from "~/app/_components/sign-in-form";
+import { devLoginEnabled } from "~/server/better-auth/config";
 import { env } from "~/env";
 
 export default function SignInPage() {
@@ -11,7 +12,11 @@ export default function SignInPage() {
 
   return (
     <main className="mx-auto flex max-w-3xl justify-center px-4 py-16">
-      <SignInForm enableGoogle={enableGoogle} enableDiscord={enableDiscord} />
+      <SignInForm
+        enableGoogle={enableGoogle}
+        enableDiscord={enableDiscord}
+        devLoginEnabled={devLoginEnabled}
+      />
     </main>
   );
 }

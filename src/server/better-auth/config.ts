@@ -6,6 +6,12 @@ import { db } from "~/server/db";
 
 const baseURL = env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
+// Double-guarded so this can never take effect in a real deployment even if
+// the env var were somehow set there by mistake: NODE_ENV must also not be
+// "production".
+export const devLoginEnabled =
+  env.NODE_ENV !== "production" && env.ENABLE_DEV_LOGIN === "true";
+
 export const auth = betterAuth({
   baseURL,
   database: prismaAdapter(db, {
@@ -20,6 +26,7 @@ export const auth = betterAuth({
       },
     },
   },
+  ...(devLoginEnabled ? { emailAndPassword: { enabled: true } } : {}),
   socialProviders: {
     ...(env.BETTER_AUTH_GOOGLE_CLIENT_ID && env.BETTER_AUTH_GOOGLE_CLIENT_SECRET
       ? {
