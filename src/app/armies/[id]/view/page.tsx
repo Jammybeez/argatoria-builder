@@ -72,7 +72,7 @@ export default async function ArmyViewPage({
         <PrintButton />
       </div>
 
-      <header className="mb-6 border-b border-brass/40 pb-4 print:border-stone-300">
+      <header className="mb-6 border-b border-brass/40 pb-4 print:mb-3 print:border-stone-300 print:pb-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="font-display text-3xl tracking-wide text-bronze-light uppercase print:text-stone-900">
             {army.name}
@@ -106,17 +106,17 @@ export default async function ArmyViewPage({
           No units in this army yet.
         </p>
       ) : (
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-8 print:gap-4">
           {rosterByCategory.map(({ category, entries }) => (
             <section key={category} className="break-inside-avoid">
-              <h2 className="mb-2 text-sm font-semibold tracking-wide text-parchment-dim uppercase print:text-stone-600">
+              <h2 className="mb-2 text-sm font-semibold tracking-wide text-parchment-dim uppercase print:mb-1 print:text-stone-600">
                 {CATEGORY_LABELS[category]}
               </h2>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 print:gap-2">
                 {entries.map((au) => (
                   <div
                     key={au.id}
-                    className="break-inside-avoid rounded-lg border border-brass/40 bg-leather p-4 print:border-stone-300 print:bg-white"
+                    className="break-inside-avoid rounded-lg border border-brass/40 bg-leather p-4 print:border-stone-300 print:bg-white print:p-2"
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <h3 className="font-semibold text-parchment print:text-stone-900">
@@ -147,13 +147,13 @@ export default async function ArmyViewPage({
                     </div>
 
                     {!au.isDuplicateUnit && (
-                      <div className="mt-2">
+                      <div className="mt-2 print:mt-1">
                         <UnitStatLine unit={au.unit} />
                       </div>
                     )}
 
                     {!au.isDuplicateUnit && au.unit.specialRules.length > 0 && (
-                      <ul className="mt-3 flex flex-col gap-1">
+                      <ul className="mt-3 flex flex-col gap-1 print:mt-1">
                         {au.unit.specialRules.map((rule) => (
                           <li
                             key={rule.id}
@@ -169,7 +169,7 @@ export default async function ArmyViewPage({
                     )}
 
                     {au.upgrades.length > 0 && (
-                      <div className="mt-3 border-t border-brass/40 pt-2 print:border-stone-300">
+                      <div className="mt-3 border-t border-brass/40 pt-2 print:mt-1 print:border-stone-300 print:pt-1">
                         <ul className="flex flex-col gap-1">
                           {au.upgrades.map((u) => (
                             <li
