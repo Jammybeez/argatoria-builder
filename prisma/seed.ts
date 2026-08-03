@@ -1,4 +1,5 @@
 import { PrismaClient } from "../generated/prisma";
+import { appendixUnits, seedAppendixUnits } from "./seed-appendix";
 import { factions, seedFaction } from "./seed-factions";
 import {
   artefacts,
@@ -14,6 +15,10 @@ async function main() {
   for (const faction of factions) {
     await seedFaction(db, faction);
   }
+
+  // Appendix units reference real factions by name in their eligibility
+  // list, so this must run after the normal factions are seeded above.
+  await seedAppendixUnits(db, appendixUnits);
 
   await seedUpgrades(db, magicItems);
   console.log(`Seeded ${magicItems.length} magic items.`);

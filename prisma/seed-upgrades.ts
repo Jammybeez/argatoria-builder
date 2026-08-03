@@ -6,7 +6,11 @@ export interface SeedUpgrade {
   pointsCost: number;
   range?: number; // spells only: casting range in cm. Omitted = "battlefield" (unlimited range)
   castingValue?: number; // spells only: Magic Test target (roll <= this)
-  factionName?: string; // faction this item is restricted to, if any
+  factionNames?: string[]; // faction(s) this item is restricted to, if any
+  // Only a hero with this exact unit name can take it (e.g. Spellweaver's
+  // Toughening/Drowsiness aren't available to any other Mage). Omitted =
+  // any eligible hero of the right sub-type can buy it.
+  restrictedToUnitName?: string;
   requirementsText?: string; // free-text conditions not otherwise modeled
   effectText: string;
 }
@@ -194,7 +198,7 @@ export const magicItems: SeedUpgrade[] = [
     type: "MAGIC_ITEM",
     name: "Elixir of Audacity",
     pointsCost: 1,
-    factionName: "Er'Sael",
+    factionNames: ["Er'Sael"],
     requirementsText:
       "Alchemist only. Does not count toward the magic item limit, but only one elixir may be taken.",
     effectText:
@@ -204,7 +208,7 @@ export const magicItems: SeedUpgrade[] = [
     type: "MAGIC_ITEM",
     name: "Elixir of Foresight",
     pointsCost: 2,
-    factionName: "Er'Sael",
+    factionNames: ["Er'Sael"],
     requirementsText:
       "Alchemist only. Does not count toward the magic item limit, but only one elixir may be taken.",
     effectText: "General's LD is increased to 5.",
@@ -213,7 +217,7 @@ export const magicItems: SeedUpgrade[] = [
     type: "MAGIC_ITEM",
     name: "Elixir of Insolence",
     pointsCost: 3,
-    factionName: "Er'Sael",
+    factionNames: ["Er'Sael"],
     requirementsText:
       "Alchemist only. Does not count toward the magic item limit, but only one elixir may be taken.",
     effectText:
@@ -550,9 +554,30 @@ export const spells: SeedUpgrade[] = [
     effectText:
       "Choose other friendly Mage within 40 cm or the one casting this spell and perform a Magic Test. If successful, in the subsequent cycle, the chosen Mage grants the unit he is attached to +D6 attacks to the pool (in addition to his standard +1 attack).",
   },
+  // Spellweaver-exclusive spells, only available to that Hero of Avantur.
+  {
+    type: "SPELL",
+    name: "Toughening",
+    pointsCost: 3,
+    range: 20,
+    castingValue: 4,
+    restrictedToUnitName: "Spellweaver",
+    effectText:
+      "Choose target unit (but not single model) within 20 cm of the Mage and perform a Magic Test. If successful, in the subsequent cycle, the chosen unit's Toughness (T) is doubled.",
+  },
+  {
+    type: "SPELL",
+    name: "Drowsiness",
+    pointsCost: 2,
+    range: 30,
+    castingValue: 3,
+    restrictedToUnitName: "Spellweaver",
+    effectText:
+      "Choose target enemy unit within 30 cm of the Mage and perform a Magic Test. If successful, in the subsequent cycle, the chosen unit's Mobility (M) is halved, rounded down.",
+  },
 ];
 
-// Several banners are restricted to a specific faction (factionName) and,
+// Several banners are restricted to a specific faction (factionNames) and,
 // for a few Sheol-morg ones, further to a specific General via
 // requirementsText (shown as a caveat, not enforced — see the General
 // exclusion note on Banner of God Seth). A handful also reference bonus
@@ -632,7 +657,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Bathed in Blood",
     pointsCost: 14,
-    factionName: "Vaendral",
+    factionNames: ["Vaendral"],
     effectText:
       "The unit with this Command Group attached has Bloodshed (This unit may re-roll all failed scores in the Wound Test). If the unit with this Command Group attached has Bloodshed by default, it gets +2 to S.",
   },
@@ -640,7 +665,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Gods' Slayers",
     pointsCost: 10,
-    factionName: "Vaendral",
+    factionNames: ["Vaendral"],
     effectText:
       "The unit with this Command Group attached has Terrible Damage (Each score of 1 in the Wound Test deals an additional Wound). If the unit with this Command Group attached has Terrible Damage by default, it gets +3 to M.",
   },
@@ -648,7 +673,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Lords of Beasts",
     pointsCost: 12,
-    factionName: "Gaeldor",
+    factionNames: ["Gaeldor"],
     effectText:
       "The unit with this Command Group attached has Momentum (When charging, this unit has an A stat increased by 1). If the unit with this Command Group attached has Momentum by default, it gets +1 to WS.",
   },
@@ -656,7 +681,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Ancient Forest",
     pointsCost: 10,
-    factionName: "Gaeldor",
+    factionNames: ["Gaeldor"],
     effectText:
       "In the army with this banner, Trefloqs must choose their species – Elm or Oak. Oak Trefloq gains Trample (For each successful score in the Weapon Skill Test, roll an additional D6 for hitting. Additional successful scores do not generate the new ones). Elm Trefloq gains Wild Speed (This unit always rolls an additional D6 when moving or charging, regardless of the situation). In addition, the army is allowed to field 1 unit of Old Ones (Oduns) – 19 pts/base. Old Ones possess the same characteristics and abilities as Oduns, but they can also cast a Language of Beasts spell during their activation, following the general rules and conditions.",
   },
@@ -664,7 +689,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Wolf Brotherhood",
     pointsCost: 20,
-    factionName: "Dirandis",
+    factionNames: ["Dirandis"],
     effectText:
       "The army with this banner fields Wolf Brothers as Basic Units instead of the Elite. Wilhars are fielded as Elite Units instead of the Unique and they have Frenzy (When charging, this unit doubles its Attacks (A) stat).",
   },
@@ -672,7 +697,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Unbending",
     pointsCost: 12,
-    factionName: "Dirandis",
+    factionNames: ["Dirandis"],
     effectText:
       "The unit with this Command Group attached has Fearless. In addition, if the unit with this Command Group attached has Focused Attack (When charging, this unit gets +1 to WS), it works at all times, not only when charging.",
   },
@@ -680,7 +705,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of Conquest",
     pointsCost: 12,
-    factionName: "Er'Sael",
+    factionNames: ["Er'Sael"],
     effectText:
       "A friendly unit that is activated as first in the cycle always receives a bonus of +5 cm to move or charge.",
   },
@@ -688,7 +713,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of Ugruk-hor",
     pointsCost: 10,
-    factionName: "Er'Sael",
+    factionNames: ["Er'Sael"],
     effectText:
       "Units in the army can add a rank of Marauders to the Horde that allowed to deploy them (such a Horde consists of 20 bases). Hordes consisting of exactly 20 bases may have orders issued to them by the General re-rolled.",
   },
@@ -696,7 +721,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Heralds of Torment",
     pointsCost: 14,
-    factionName: "Sorgax",
+    factionNames: ["Sorgax"],
     effectText:
       "The unit with this Command Group attached has Iron Discipline (Orders issued to this unit can be re-rolled, and each score of 1 means a free order). If the unit with this Command Group attached has Iron Discipline by default, it gets Sneaky (This unit gets +2 attacks for attacking the enemy's flank or rear).",
   },
@@ -704,7 +729,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Serpent",
     pointsCost: 14,
-    factionName: "Sorgax",
+    factionNames: ["Sorgax"],
     effectText:
       "The army carrying this banner fields Slagors as Basic Units instead of Rare Units. Additionally, empowered by the banner's magic, Slagors enter a battle trance that allows them to re-roll their WS Test when charging.",
   },
@@ -712,7 +737,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Hotbloods",
     pointsCost: 10,
-    factionName: "Arox",
+    factionNames: ["Arox"],
     effectText:
       "The unit with this Command Group attached has Agile (This unit can always re-roll one D6 when moving or charging). If the unit with this Command Group attached has Agile by default, it can always re-roll one D6 when moving and up to two D6 when charging.",
   },
@@ -720,7 +745,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of Advance",
     pointsCost: 8,
-    factionName: "Arox",
+    factionNames: ["Arox"],
     effectText:
       "Ability range of this banner is 20 cm. All friendly units within this range do not lose charge bonuses when charging at an enemy Horde. In addition, each friendly unit within this range gains a bonus of +D6 cm when regrouping.",
   },
@@ -728,7 +753,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of the Great Menagerie",
     pointsCost: 6,
-    factionName: "Sheol-morg",
+    factionNames: ["Sheol-morg"],
     effectText:
       "If a Command Group with this banner is attached to a friendly unit, it supports the unit with +5 attacks instead of +1.",
   },
@@ -736,7 +761,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of Goddess Ehidne",
     pointsCost: 11,
-    factionName: "Sheol-morg",
+    factionNames: ["Sheol-morg"],
     requirementsText: "Sheol-morg, led by Lord of the Abyss only.",
     effectText:
       "The army has one more prayer per cycle. In addition, the army is allowed to field 1 unit of Priestesses of Enslavement (Basic Unit).",
@@ -745,7 +770,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of God Nathel",
     pointsCost: 15,
-    factionName: "Sheol-morg",
+    factionNames: ["Sheol-morg"],
     effectText:
       "Before the battle, place three D6 dice (in a different colour than the ones you normally use) in your deployment zone. Once per cycle, you can use one of the dice to re-roll one D6 result – obtained by your opponent or yourself. You and your opponent must accept the result of the re-roll (the Nathel's will). In addition, the army is allowed to field 1 unit of the Deceived: you may field 1 Basic Unit or 1 Elite Unit (paying its standard cost per base) from any army other than Sheol-morg, taking into account the standard limits and requirements for Basic and Elite Units in an army. The Marauders rule applies as normal.",
   },
@@ -753,7 +778,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of God Duur",
     pointsCost: 8,
-    factionName: "Sheol-morg",
+    factionNames: ["Sheol-morg"],
     effectText:
       "When the enemy unit is making a Wound Test against the unit with this Command Group attached, it may be dealt Wounds itself. For each 6 the enemy unit obtains in such Wound Test (after any re-rolls), it is dealt 1 Wound. In addition, if the enemy unit has any save, it must re-roll successful saving throws when fighting against the unit with this Command Group attached.",
   },
@@ -761,7 +786,7 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of God Seth",
     pointsCost: 12,
-    factionName: "Sheol-morg",
+    factionNames: ["Sheol-morg"],
     requirementsText: "Sheol-morg, led by General other than Lord Necromancer only.",
     effectText:
       "Enemy units within 30 cm of a Command Group with this banner must re-roll a successful Cold Blood Test. If a Command Group with this banner is attached to a friendly unit, it supports the unit with +3 attacks instead of +1. In addition, your army is allowed to field 1 unit of Ahsids (Basic Unit).",
@@ -770,10 +795,18 @@ export const banners: SeedUpgrade[] = [
     type: "BANNER",
     name: "Banner of Death",
     pointsCost: 9,
-    factionName: "Sheol-morg",
+    factionNames: ["Sheol-morg"],
     requirementsText: "Sheol-morg, led by Lord Necromancer only.",
     effectText:
       "The range of abilities of the Command Group with this banner is 10 cm. In addition, all enemy units within 20 cm of this Command Group must re-roll successful Panic Tests.",
+  },
+  {
+    type: "BANNER",
+    name: "Banner of Avantur",
+    pointsCost: 1,
+    factionNames: ["Vaendral", "Dirandis", "Gaeldor"],
+    requirementsText: "Only one Half-Giants Command Group may buy this banner.",
+    effectText: "The army with this banner gains access to the Heroes of Avantur.",
   },
 ];
 
@@ -789,7 +822,8 @@ export async function seedUpgrades(db: PrismaClient, upgrades: SeedUpgrade[]) {
       pointsCost: item.pointsCost,
       range: item.range ?? null,
       castingValue: item.castingValue ?? null,
-      factionName: item.factionName ?? null,
+      factionNames: item.factionNames ?? [],
+      restrictedToUnitName: item.restrictedToUnitName ?? null,
       requirementsText: item.requirementsText ?? null,
       effectText: item.effectText,
     };

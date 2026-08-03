@@ -9,8 +9,17 @@ export const HERO_TYPE_UPGRADE_TYPES: Partial<
   GENERAL: ["ARTEFACT"],
 };
 
-export function upgradeTypesForHero(heroType: HeroType): UpgradeType[] {
-  return HERO_TYPE_UPGRADE_TYPES[heroType] ?? [];
+// grantsMageUpgrades: some heroes are a different primary type (e.g.
+// Legendary Hero) but are explicitly written as also being a Mage — Mage
+// upgrade access on top of whatever their heroType already grants, without
+// changing their heroType (which still drives their own composition cap).
+export function upgradeTypesForHero(
+  heroType: HeroType,
+  grantsMageUpgrades = false,
+): UpgradeType[] {
+  const base = HERO_TYPE_UPGRADE_TYPES[heroType] ?? [];
+  if (!grantsMageUpgrades || heroType === "MAGE") return base;
+  return [...new Set([...base, "SPELL", "MAGIC_ITEM"] as UpgradeType[])];
 }
 
 // Base max of a given upgrade type a single hero instance can carry, before

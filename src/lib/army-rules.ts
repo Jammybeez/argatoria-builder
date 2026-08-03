@@ -7,6 +7,10 @@ import type { HeroType, UnitCategory } from "../../generated/prisma";
 const POINTS_BREAKPOINT = 1500;
 const MAGE_POINTS_PER_SLOT = 500;
 const LEGENDARY_HERO_POINTS_PER_SLOT = 1000;
+// Shared pool across all Mercenary-category units combined (e.g. Skaals +
+// Bristles together), not per specific unit. Flat regardless of points —
+// only one data point so far, unlike Rare/Unique which scale.
+const MERCENARY_MAX = 3;
 
 const HERO_MIN = 4;
 
@@ -38,16 +42,35 @@ export function legendaryHeroMax(pointsLimit: number) {
   return Math.floor(pointsLimit / LEGENDARY_HERO_POINTS_PER_SLOT);
 }
 
+export function mercenaryMax() {
+  return MERCENARY_MAX;
+}
+
 export interface ArmyUnitLike {
   quantity: number;
   unit: {
     name: string;
     category: UnitCategory;
     heroType: HeroType;
-    requiresHeroName: string | null;
+    requiresHeroNames: string[];
+    // At least one of these must be present, in addition to (not instead
+    // of) requiresHeroNames, e.g. Northern Guard Heroes need Dirandis
+    // fielding Sasquatches OR Northern Guard (either is enough).
+    requiresAnyHeroNames: string[];
+    // Requires this exact upgrade to have been bought somewhere in the
+    // army (e.g. Heroes of Avantur need Banner of Avantur purchased) —
+    // gated on a purchase, not a unit's presence.
+    requiresUpgradeName: string | null;
     recategorizeGeneralName: string | null;
     recategorizeToCategory: UnitCategory | null;
+    maxPerPoints: number | null;
+    maxCount: number | null;
+    // Grants Mage upgrade access (and counts toward the Mage cap) on top
+    // of whatever this unit's own heroType already grants, e.g. Kor'quixos
+    // is a Legendary Hero who is also explicitly a Mage.
+    grantsMageUpgrades: boolean;
   };
+  upgrades: { upgrade: { name: string } }[];
 }
 
 export interface CompositionIssue {
@@ -65,6 +88,12 @@ export function getPresentGeneralNames(armyUnits: ArmyUnitLike[]): Set<string> {
 
 export function getPresentUnitNames(armyUnits: ArmyUnitLike[]): Set<string> {
   return new Set(armyUnits.map((au) => au.unit.name));
+}
+
+export function getPresentUpgradeNames(armyUnits: ArmyUnitLike[]): Set<string> {
+  return new Set(
+    armyUnits.flatMap((au) => au.upgrades.map((u) => u.upgrade.name)),
+  );
 }
 
 // A unit's category for composition-counting and catalog/roster grouping —
@@ -85,14 +114,32 @@ export function effectiveCategory(
 }
 
 // Whether a unit can be added to (or legally remain in) an army given which
-// other units (of any category — General, Mage, etc.) are already in the
-// roster, e.g. Er'Sael's Larva of Nalharap requires the Mage "Black
-// Shepherd", not a General.
+// other units (of any category — General, Mage, etc.) and upgrades are
+// already present, e.g. Er'Sael's Larva of Nalharap requires the Mage
+// "Black Shepherd", not a General. All names in requiresHeroNames must be
+// present (e.g. Ghosts requires both the General "Lord Necromancer" and the
+// Champion "Champion of Ghosts"); at least one of requiresAnyHeroNames must
+// be present if it's non-empty; requiresUpgradeName, if set, must have been
+// bought somewhere in the army.
 export function isUnitAvailable(
-  unit: { requiresHeroName: string | null },
+  unit: {
+    requiresHeroNames: string[];
+    requiresAnyHeroNames: string[];
+    requiresUpgradeName: string | null;
+  },
   presentUnitNames: Set<string>,
+  presentUpgradeNames: Set<string>,
 ): boolean {
-  return !unit.requiresHeroName || presentUnitNames.has(unit.requiresHeroName);
+  const allRequiredPresent = unit.requiresHeroNames.every((name) =>
+    presentUnitNames.has(name),
+  );
+  const anyRequiredPresent =
+    unit.requiresAnyHeroNames.length === 0 ||
+    unit.requiresAnyHeroNames.some((name) => presentUnitNames.has(name));
+  const upgradePresent =
+    !unit.requiresUpgradeName ||
+    presentUpgradeNames.has(unit.requiresUpgradeName);
+  return allRequiredPresent && anyRequiredPresent && upgradePresent;
 }
 
 function checkRange(
@@ -123,6 +170,7 @@ export function getCompositionIssues(
   const issues: CompositionIssue[] = [];
   const presentGeneralNames = getPresentGeneralNames(armyUnits);
   const presentUnitNames = getPresentUnitNames(armyUnits);
+  const presentUpgradeNames = getPresentUpgradeNames(armyUnits);
 
   const count = (category: UnitCategory) =>
     armyUnits.filter(
@@ -135,26 +183,81 @@ export function getCompositionIssues(
 
   const unavailableUnitNames = new Set(
     armyUnits
-      .filter((au) => !isUnitAvailable(au.unit, presentUnitNames))
+      .filter(
+        (au) =>
+          !isUnitAvailable(au.unit, presentUnitNames, presentUpgradeNames),
+      )
       .map((au) => au.unit.name),
   );
   for (const name of unavailableUnitNames) {
     const unit = armyUnits.find((au) => au.unit.name === name)!.unit;
+    const reasons: string[] = [];
+    const missingAll = unit.requiresHeroNames.filter(
+      (n) => !presentUnitNames.has(n),
+    );
+    if (missingAll.length > 0) reasons.push(missingAll.join(" and "));
+    if (
+      unit.requiresAnyHeroNames.length > 0 &&
+      !unit.requiresAnyHeroNames.some((n) => presentUnitNames.has(n))
+    ) {
+      reasons.push(`one of ${unit.requiresAnyHeroNames.join(" or ")}`);
+    }
+    if (
+      unit.requiresUpgradeName &&
+      !presentUpgradeNames.has(unit.requiresUpgradeName)
+    ) {
+      reasons.push(`the upgrade "${unit.requiresUpgradeName}"`);
+    }
     issues.push({
       id: `requires-hero-${name}`,
-      message: `${name} requires ${unit.requiresHeroName} in the army.`,
+      message: `${name} requires ${reasons.join(" and ")} in the army.`,
     });
+  }
+
+  // Per-unit caps (e.g. Rotgant: max 1 per full 1000 army points; Ghosts:
+  // max 1 flat), one row per model for FLAT-cost units, distinct from the
+  // hero-type caps below. If both a scaling and a flat cap are set, the
+  // more restrictive of the two applies.
+  const cappedUnitNames = new Set(
+    armyUnits
+      .filter((au) => au.unit.maxPerPoints ?? au.unit.maxCount)
+      .map((au) => au.unit.name),
+  );
+  for (const name of cappedUnitNames) {
+    const unit = armyUnits.find((au) => au.unit.name === name)!.unit;
+    const scalingMax = unit.maxPerPoints
+      ? Math.floor(pointsLimit / unit.maxPerPoints)
+      : Infinity;
+    const max = Math.min(scalingMax, unit.maxCount ?? Infinity);
+    const unitCount = armyUnits.filter((au) => au.unit.name === name).length;
+    if (unitCount > max) {
+      const capDescription = unit.maxCount
+        ? `max ${unit.maxCount}`
+        : `1 per ${unit.maxPerPoints} points`;
+      issues.push({
+        id: `unit-cap-${name}`,
+        message: `${name} (${unitCount}) exceeds the max of ${max} for a ${pointsLimit}pt army (${capDescription}).`,
+      });
+    }
   }
 
   const basicCount = count("BASIC");
   const eliteCount = count("ELITE");
   const rareCount = count("RARE");
   const uniqueCount = count("UNIQUE");
+  const mercenaryCount = count("MERCENARY");
   const heroTotal = count("HERO");
   const generalCount = heroCount("GENERAL");
   const commandGroupCount = heroCount("COMMAND_GROUP");
   const championCount = heroCount("CHAMPION");
-  const mageCount = heroCount("MAGE");
+  // Includes heroes whose primary type isn't Mage but who are explicitly
+  // also a Mage (e.g. Kor'quixos, a Legendary Hero) — they count toward
+  // both their own type's cap and the Mage cap.
+  const mageCount =
+    heroCount("MAGE") +
+    armyUnits.filter(
+      (au) => au.unit.heroType !== "MAGE" && au.unit.grantsMageUpgrades,
+    ).length;
   const legendaryHeroCount = heroCount("LEGENDARY_HERO");
 
   if (eliteCount > basicCount) {
@@ -171,6 +274,15 @@ export function getCompositionIssues(
     "Unique Units",
     uniqueCount,
     [0, uniqueMax(pointsLimit)],
+    pointsLimit,
+  );
+
+  checkRange(
+    issues,
+    "mercenary",
+    "Mercenary Units",
+    mercenaryCount,
+    [0, mercenaryMax()],
     pointsLimit,
   );
 

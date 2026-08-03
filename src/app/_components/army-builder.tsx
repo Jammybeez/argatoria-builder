@@ -9,6 +9,7 @@ import {
   getCompositionIssues,
   getPresentGeneralNames,
   getPresentUnitNames,
+  getPresentUpgradeNames,
   isUnitAvailable,
 } from "~/lib/army-rules";
 import { getMaraudersEntries } from "~/lib/marauders";
@@ -176,6 +177,12 @@ function UpgradesPanel({
 
   const available = catalog.filter((upgrade) => {
     if (upgrade.type !== type) return false;
+    if (
+      upgrade.restrictedToUnitName &&
+      upgrade.restrictedToUnitName !== armyUnit.unit.name
+    ) {
+      return false;
+    }
     if (!isExemptFromHeroCap(upgrade.name, upgrade.type)) {
       const cap = perHeroMax(type, armyUnit.upgrades);
       const current = countTowardHeroCap(type, armyUnit.upgrades);
@@ -320,6 +327,12 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
   const [pendingAddUnitIds, setPendingAddUnitIds] = useState<Set<string>>(
     new Set(),
   );
+
+  // Whether the catalog shows appendix units (cross-faction units eligible
+  // for this army). Only gates what's offered to add — units already in the
+  // roster always display regardless of this toggle. Not persisted; resets
+  // to off each time the builder loads.
+  const [showAppendixUnits, setShowAppendixUnits] = useState(false);
 
   const renameArmy = api.army.rename.useMutation({ onSuccess: invalidateArmy });
 
@@ -512,6 +525,7 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
   const compositionIssues = getCompositionIssues(army.pointsLimit, army.units);
   const presentGeneralNames = getPresentGeneralNames(army.units);
   const presentUnitNames = getPresentUnitNames(army.units);
+  const presentUpgradeNames = getPresentUpgradeNames(army.units);
 
   const maraudersEntries = getMaraudersEntries(liveArmyUnits);
   const rosterEntries = [
@@ -538,7 +552,10 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
   const catalogByCategory = CATEGORY_ORDER.map((category) => ({
     category,
     units: (factionQuery.data?.units ?? [])
-      .filter((u) => isUnitAvailable(u, presentUnitNames))
+      .filter((u) => showAppendixUnits || !u.isAppendixUnit)
+      .filter((u) =>
+        isUnitAvailable(u, presentUnitNames, presentUpgradeNames),
+      )
       .filter((u) => effectiveCategory(u, presentGeneralNames) === category),
   })).filter((g) => g.units.length > 0);
 
@@ -624,7 +641,10 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
                     {entries.map((au) => {
                       const upgradeTypes = au.isMarauders
                         ? []
-                        : upgradeTypesForHero(au.unit.heroType);
+                        : upgradeTypesForHero(
+                            au.unit.heroType,
+                            au.unit.grantsMageUpgrades,
+                          );
                       return (
                         <div
                           key={au.id}
@@ -761,9 +781,20 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
       </section>
 
       <section>
-        <h2 className="text-parchment-dim mb-3 text-sm font-semibold tracking-wide uppercase">
-          Add Units
-        </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-parchment-dim text-sm font-semibold tracking-wide uppercase">
+            Add Units
+          </h2>
+          <label className="text-parchment-dim flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={showAppendixUnits}
+              onChange={(e) => setShowAppendixUnits(e.target.checked)}
+              className="accent-bronze"
+            />
+            Use appendix units
+          </label>
+        </div>
         {factionQuery.isLoading ? (
           <p className="text-parchment-dim">Loading unit catalog...</p>
         ) : (

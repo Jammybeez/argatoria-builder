@@ -10,6 +10,7 @@ import {
   upgradeTypesForHero,
 } from "~/lib/upgrade-rules";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import type { db as dbClient } from "~/server/db";
 
 const armyUnitInclude = {
   unit: { include: { specialRules: true } },
@@ -24,6 +25,44 @@ const armyWithUnitsInclude = {
   },
 };
 
+// Appendix units can cost a different amount depending on which faction
+// takes them (AppendixEligibility.costOverride, e.g. Bristles costs less in
+// the Vaendral army). Overrides each armyUnit's unit.pointsCost so
+// armyUnitPoints() and every downstream consumer (roster, print view,
+// totals) picks it up without needing to know about eligibility rows at all.
+async function withAppendixCostOverrides<
+  A extends {
+    factionId: string;
+    units: { unit: { id: string; pointsCost: number } }[];
+  },
+>(db: typeof dbClient, army: A): Promise<A> {
+  const unitIds = army.units.map((au) => au.unit.id);
+  if (unitIds.length === 0) return army;
+
+  const overrides = await db.appendixEligibility.findMany({
+    where: {
+      factionId: army.factionId,
+      unitId: { in: unitIds },
+      costOverride: { not: null },
+    },
+  });
+  if (overrides.length === 0) return army;
+
+  const overrideByUnitId = new Map(
+    overrides.map((o) => [o.unitId, o.costOverride!]),
+  );
+
+  return {
+    ...army,
+    units: army.units.map((au) => {
+      const cost = overrideByUnitId.get(au.unit.id);
+      return cost === undefined
+        ? au
+        : { ...au, unit: { ...au.unit, pointsCost: cost } };
+    }),
+  };
+}
+
 export const armyRouter = createTRPCRouter({
   listMine: protectedProcedure.query(async ({ ctx }) => {
     const armies = await ctx.db.army.findMany({
@@ -35,7 +74,11 @@ export const armyRouter = createTRPCRouter({
       orderBy: { updatedAt: "desc" },
     });
 
-    return armies.map((army) => ({
+    const armiesWithOverrides = await Promise.all(
+      armies.map((army) => withAppendixCostOverrides(ctx.db, army)),
+    );
+
+    return armiesWithOverrides.map((army) => ({
       ...army,
       totalPoints: army.units.reduce(
         (sum, au) => sum + armyUnitPoints(au),
@@ -56,7 +99,7 @@ export const armyRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Army not found" });
       }
 
-      return army;
+      return withAppendixCostOverrides(ctx.db, army);
     }),
 
   create: protectedProcedure
@@ -136,24 +179,71 @@ export const armyRouter = createTRPCRouter({
       const unit = await ctx.db.unit.findUnique({
         where: { id: input.unitId },
       });
-      if (unit?.factionId !== army.factionId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Unit does not belong to this army's faction",
-        });
+      if (!unit) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Unit not found" });
       }
 
-      if (unit.requiresHeroName) {
+      // Either a normal unit of this army's faction, or an appendix unit
+      // explicitly eligible for it (see AppendixEligibility).
+      let requiredHeroNames = unit.requiresHeroNames;
+      let requiredAnyHeroNames = unit.requiresAnyHeroNames;
+      let requiredUpgradeName = unit.requiresUpgradeName;
+      if (unit.factionId !== army.factionId) {
+        const eligibility = await ctx.db.appendixEligibility.findFirst({
+          where: { unitId: unit.id, factionId: army.factionId },
+        });
+        if (!eligibility) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Unit does not belong to this army's faction",
+          });
+        }
+        requiredHeroNames = eligibility.requiresGeneralNames;
+        requiredAnyHeroNames = eligibility.requiresAnyGeneralNames;
+        requiredUpgradeName = eligibility.requiresUpgradeName;
+      }
+
+      for (const requiredName of requiredHeroNames) {
         const hasRequiredHero = await ctx.db.armyUnit.findFirst({
           where: {
             armyId: input.armyId,
-            unit: { name: unit.requiresHeroName },
+            unit: { name: requiredName },
           },
         });
         if (!hasRequiredHero) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `${unit.name} requires ${unit.requiresHeroName} in the army`,
+            message: `${unit.name} requires ${requiredName} in the army`,
+          });
+        }
+      }
+
+      if (requiredAnyHeroNames.length > 0) {
+        const hasAnyRequiredHero = await ctx.db.armyUnit.findFirst({
+          where: {
+            armyId: input.armyId,
+            unit: { name: { in: requiredAnyHeroNames } },
+          },
+        });
+        if (!hasAnyRequiredHero) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `${unit.name} requires one of ${requiredAnyHeroNames.join(", ")} in the army`,
+          });
+        }
+      }
+
+      if (requiredUpgradeName) {
+        const hasRequiredUpgrade = await ctx.db.armyUnitUpgrade.findFirst({
+          where: {
+            armyUnit: { armyId: input.armyId },
+            upgrade: { name: requiredUpgradeName },
+          },
+        });
+        if (!hasRequiredUpgrade) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `${unit.name} requires the "${requiredUpgradeName}" upgrade in the army`,
           });
         }
       }
@@ -239,23 +329,38 @@ export const armyRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Upgrade not found" });
       }
 
-      if (!upgradeTypesForHero(armyUnit.unit.heroType).includes(upgrade.type)) {
+      if (
+        !upgradeTypesForHero(
+          armyUnit.unit.heroType,
+          armyUnit.unit.grantsMageUpgrades,
+        ).includes(upgrade.type)
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `${armyUnit.unit.name} cannot take a ${upgrade.type.toLowerCase()}`,
         });
       }
 
-      if (upgrade.factionName) {
+      if (upgrade.factionNames.length > 0) {
         const faction = await ctx.db.faction.findUnique({
           where: { id: armyUnit.army.factionId },
         });
-        if (upgrade.factionName !== faction?.name) {
+        if (!faction || !upgrade.factionNames.includes(faction.name)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `${upgrade.name} is restricted to ${upgrade.factionName}`,
+            message: `${upgrade.name} is restricted to ${upgrade.factionNames.join(", ")}`,
           });
         }
+      }
+
+      if (
+        upgrade.restrictedToUnitName &&
+        upgrade.restrictedToUnitName !== armyUnit.unit.name
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `${upgrade.name} can only be taken by ${upgrade.restrictedToUnitName}`,
+        });
       }
 
       // All upgrades currently attached anywhere in this army, to check

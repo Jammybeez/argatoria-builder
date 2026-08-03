@@ -16,7 +16,10 @@ export const upgradeRouter = createTRPCRouter({
 
       return ctx.db.upgrade.findMany({
         where: {
-          OR: [{ factionName: null }, { factionName: faction.name }],
+          OR: [
+            { factionNames: { isEmpty: true } },
+            { factionNames: { has: faction.name } },
+          ],
         },
         orderBy: [{ type: "asc" }, { name: "asc" }],
       });

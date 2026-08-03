@@ -90,6 +90,7 @@ enum UnitCategory {
   RARE
   UNIQUE
   HERO
+  MERCENARY
 }
 
 // PER_BASE: pointsCost is multiplied by the number of bases/models chosen.
@@ -118,8 +119,14 @@ model Faction {
   armySpecialRuleName String?
   armySpecialRuleText String?
 
-  units  Unit[]
-  armies Army[]
+  // Marks the single dummy "Appendix" faction row used to hold appendix
+  // units (see AppendixEligibility). Excluded from the normal army-creation
+  // faction picker; never chosen as an Army's own faction.
+  isAppendix Boolean @default(false)
+
+  units                Unit[]
+  armies               Army[]
+  appendixEligibilities AppendixEligibility[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -138,11 +145,28 @@ model Unit {
   maxBases   Int? // max bases per unit instance, for PER_BASE units
   heroType   HeroType @default(OTHER) // only meaningful when category is HERO
 
-  // This unit can only be added to an army if a unit with this exact name is
-  // already in the roster (e.g. Truhlaks (Skeletons) requires the General
-  // "Lord Necromancer"; Larva of Nalharap requires the Mage "Black
-  // Shepherd"). Not restricted to Generals. Null = no requirement.
-  requiresHeroName String?
+  // This unit can only be added to an army if units with ALL of these exact
+  // names are already in the roster (e.g. Truhlaks (Skeletons) requires the
+  // General "Lord Necromancer"; Ghosts requires both the General "Lord
+  // Necromancer" and the Champion "Champion of Ghosts"). Not restricted to
+  // Generals. Empty array = no requirement.
+  requiresHeroNames String[] @default([])
+
+  // At least one of these must be present, in addition to (not instead of)
+  // requiresHeroNames, e.g. Northern Guard Heroes need Dirandis fielding
+  // Sasquatches OR Northern Guard (either is enough). Empty = no such
+  // requirement.
+  requiresAnyHeroNames String[] @default([])
+
+  // Requires this exact upgrade to have been bought somewhere in the army
+  // (e.g. Heroes of Avantur need Banner of Avantur purchased) — gated on a
+  // purchase, not a unit's presence. Null = no such requirement.
+  requiresUpgradeName String?
+
+  // Grants Mage upgrade access (and counts toward the Mage cap) on top of
+  // whatever this unit's own heroType already grants, e.g. Kor'quixos is a
+  // Legendary Hero who is also explicitly a Mage.
+  grantsMageUpgrades Boolean @default(false)
 
   // This unit's normal `category` is overridden to `recategorizeToCategory`
   // (for composition-rule counting and catalog/roster grouping) whenever a
@@ -151,6 +175,24 @@ model Unit {
   // The unit is still purchasable at its normal category otherwise.
   recategorizeGeneralName String?
   recategorizeToCategory  UnitCategory?
+
+  // Scaling per-army cap on how many instances of this specific unit are
+  // allowed, distinct from the hero-type-wide caps (Mage/Legendary Hero):
+  // max count = floor(pointsLimit / maxPerPoints), e.g. Rotgant's "max 1
+  // model per every full 1000 army points" is maxPerPoints: 1000. Null =
+  // no such cap. Shown as an advisory composition issue, same as every
+  // other composition limit in the app (not a hard block on adding it).
+  maxPerPoints Int?
+
+  // Flat, non-scaling version of the above (e.g. Ghosts: "max 1 unit in the
+  // army" regardless of points). If both this and maxPerPoints are set, the
+  // more restrictive of the two applies.
+  maxCount Int?
+
+  // Exempts this unit from the "16 bases grants a free Marauders unit" rule
+  // even though it may reach maxBases (e.g. Ghosts, a fixed 16-base unit
+  // whose own text says "Marauders rule does not apply").
+  disableMarauders Boolean @default(false)
 
   // stat line
   ld Int?
@@ -161,12 +203,53 @@ model Unit {
   a  Int?
   w  Int?
 
-  specialRules UnitSpecialRule[]
-  armyUnits    ArmyUnit[]
+  specialRules          UnitSpecialRule[]
+  armyUnits             ArmyUnit[]
+  appendixEligibilities AppendixEligibility[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([factionId])
+}
+
+// Cross-faction availability for appendix units — units that live outside
+// any single faction's normal roster (see Unit.factionId, which points at a
+// dummy "Appendix" Faction row for these) but can be taken by one or more
+// real factions, sometimes only under a specific General. One row per
+// (unit, faction) that's allowed to take it.
+model AppendixEligibility {
+  id        String @id @default(cuid())
+  unitId    String
+  unit      Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  factionId String
+  faction   Faction @relation(fields: [factionId], references: [id], onDelete: Cascade)
+
+  // Empty array = eligible under any General of this faction. Otherwise,
+  // units with ALL these exact names (e.g. a General and a specific
+  // Champion) must already be in the roster — enforced the same way
+  // Unit.requiresHeroNames already is.
+  requiresGeneralNames String[] @default([])
+
+  // At least one of these must be present, in addition to (not instead of)
+  // requiresGeneralNames — mirrors Unit.requiresAnyHeroNames.
+  requiresAnyGeneralNames String[] @default([])
+
+  // Requires this exact upgrade to have been bought somewhere in the army —
+  // mirrors Unit.requiresUpgradeName, but per-faction since eligibility
+  // itself is per-faction.
+  requiresUpgradeName String?
+
+  // Overrides the unit's normal pointsCost specifically for this faction
+  // (e.g. Bristles (Knuroses) costs 15pts/base normally, 14pts/base in the
+  // Vaendral army). Null = use the unit's own pointsCost as-is.
+  costOverride Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([unitId, factionId])
+  @@index([unitId])
   @@index([factionId])
 }
 
@@ -239,9 +322,15 @@ model Upgrade {
   range        Int?
   castingValue Int?
 
-  // Null = usable by any faction. Some items are faction-locked (e.g. the
-  // Sheol-morg-only Banner of God Seth).
-  factionName String?
+  // Empty array = usable by any faction. Some items are restricted to one
+  // or more factions (e.g. the Sheol-morg-only Banner of God Seth, or
+  // Banner of Avantur for Vaendral/Dirandis/Gaeldor).
+  factionNames String[] @default([])
+
+  // Null = any eligible hero (of the right sub-type) can buy it. Set = only
+  // a hero with this exact unit name can take it, e.g. Spellweaver's
+  // Toughening and Drowsiness spells aren't available to any other Mage.
+  restrictedToUnitName String?
 
   // Free-text conditions too specific/bespoke to model structurally (e.g.
   // "Sheol-morg, General other than Lord Necromancer only"). Shown as a

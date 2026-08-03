@@ -15,14 +15,32 @@ export interface SeedUnit {
   minBases?: number;
   maxBases?: number;
   heroType?: HeroType; // only meaningful when category is HERO
-  // Only addable if a unit with this exact name is already in the roster
-  // (not restricted to Generals).
-  requiresHeroName?: string;
+  // Only addable if units with ALL these exact names are already in the
+  // roster (not restricted to Generals).
+  requiresHeroNames?: string[];
+  // At least one of these must be present too (in addition to, not instead
+  // of, requiresHeroNames), e.g. Dirandis fielding Sasquatches OR Northern
+  // Guard.
+  requiresAnyHeroNames?: string[];
+  // Requires this exact upgrade to have been bought somewhere in the army
+  // (e.g. Heroes of Avantur need Banner of Avantur purchased).
+  requiresUpgradeName?: string;
   // Counts as recategorizeToCategory instead of `category` whenever a
   // GENERAL with this name is in the roster (still normally category
   // otherwise).
   recategorizeGeneralName?: string;
   recategorizeToCategory?: UnitCategory;
+  // Scaling per-army cap on this specific unit: max count = floor(pointsLimit
+  // / maxPerPoints), e.g. 1000 for "max 1 model per every full 1000 points".
+  maxPerPoints?: number;
+  // Flat, non-scaling version of the above (e.g. "max 1 unit in the army").
+  maxCount?: number;
+  // Exempts this unit from the 16-bases-grants-Marauders rule.
+  disableMarauders?: boolean;
+  // Grants Mage upgrade access (and counts toward the Mage cap) on top of
+  // whatever heroType already grants, e.g. a Legendary Hero who is also
+  // explicitly a Mage.
+  grantsMageUpgrades?: boolean;
   ld?: number;
   m?: number;
   ws?: number;
@@ -346,6 +364,31 @@ export const arox: SeedFaction = {
         },
       ],
     },
+    {
+      name: "Xan'toag",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 44,
+      heroType: "LEGENDARY_HERO",
+      specialRules: [
+        {
+          name: "Armour of the Sun Cities",
+          text: "Xan'toag can be eliminated by the enemy from the game only on a score of 1. In addition, a friendly unit that does not have any save and has Xan'toag attached, may roll a D6 for each of up to 3 Wounds it has suffered. Each score of 3 or less means a cancelled Wound.",
+        },
+        {
+          name: "Dragon Spear",
+          text: "When attached to a friendly unit, Xan'toag grants it +8 attacks. If an enemy single model comes in contact with Xan'toag, it is immediately dealt D6 Wounds. If the enemy model survived, it can perform a test for eliminating Xan'toag.",
+        },
+        {
+          name: "Trustees of the Club",
+          text: "Before the battle, replace one base from target friendly unit of Liagulians with the Trustees of the Club. This unit gains Fearless (This unit always passes a Cold Blood Test and a Panic Test) and Will to Fight (If this unit destroyed an enemy unit, it can regroup up to 10 cm instead of 5 cm) until the end of the battle. If Xan'toag is attached to this unit, it has Strength 4 instead of 3.",
+        },
+        {
+          name: "Ropuchon Hero",
+          text: "Xan'toag attached to a friendly unit of Ropuchons or Golden Guards grants them Frenzy (When charging, this unit doubles its Attacks (A) stat).",
+        },
+      ],
+    },
   ],
 };
 
@@ -655,6 +698,36 @@ export const sorgax: SeedFaction = {
         {
           name: "General",
           text: "As long as General is on the battlefield, his army may use the army special rule and add General's LD during Initiative Tests. For more rules see Heroes – General.",
+        },
+      ],
+    },
+    {
+      name: "Kor'quixos",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 49,
+      heroType: "LEGENDARY_HERO",
+      grantsMageUpgrades: true,
+      specialRules: [
+        {
+          name: "Monstrous Mage",
+          text: "Kor'quixos is a Mage and counts to the Mages limit in the army. May buy magic spells and items of any value. The hero is communing with powerful magic, which not only affected his mind, but caused his body to become monstrous in size. Thanks to this, when attached to a friendly unit, he grants +8 attacks.",
+        },
+        {
+          name: "Staff of Doom",
+          text: "If an enemy comes into base contact with Kor'quixos, it is immediately dealt D6 Wounds. In addition, once per battle, the staff's power can be accumulated and used against enemies – roll a D6 for each enemy unit within 15 cm of Kor'quixos. A score of 3 or less means that the enemy unit loses an Action Die.",
+        },
+        {
+          name: "Thanox Crown",
+          text: "Once per battle, Kor'quixos may choose any spell he does not have and cast it without taking a test. Dispel does not work against that spell.",
+        },
+        {
+          name: "Cyclopean Belt",
+          text: "If the unit Kor'quixos is attached to was successfully issued an order on a score of 1, once in the cycle this rule is used, the unit may use Frenzy (When charging, this unit doubles its Attacks (A) stat).",
+        },
+        {
+          name: "Grim Punisher",
+          text: "The unit Kor'quixos is attached to may be forced to make a forceful move or charge. If the player chooses to do so, they may change the unit's M stat to M 15 and roll a D6. A score of 4 or more means that one base in the unit must be removed due to enfeeblement.",
         },
       ],
     },
@@ -970,6 +1043,95 @@ export const dirandis: SeedFaction = {
         {
           name: "General",
           text: "As long as General is on the battlefield, his army may use the army special rule and add General's LD during Initiative Tests. For more rules see Heroes – General.",
+        },
+      ],
+    },
+    {
+      name: "Champion of Winter Songs",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 15,
+      heroType: "CHAMPION",
+      requiresAnyHeroNames: ["Sasquatches", "Northern Guard"],
+      specialRules: [
+        {
+          name: "Winter Song",
+          text: "If the Champion is attached to a friendly Northern Guard or Sasquatches unit, you may roll a D6. On a score of 4 or less, until the end of the cycle the unit may increase its LD to 8 or reduce it to 4, depending on the situation.",
+        },
+      ],
+    },
+    {
+      name: "Champion of Northern Guard",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 13,
+      heroType: "CHAMPION",
+      requiresAnyHeroNames: ["Sasquatches", "Northern Guard"],
+      specialRules: [
+        {
+          name: "Winter's Wrath",
+          text: "If an enemy unit makes a successful charge against the Northern Guard unit that has this Champion attached, you may roll a D6. The result is the number of attacks the enemy must subtract from their pool.",
+        },
+      ],
+    },
+    {
+      name: "Champion with Snow Horn",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 16,
+      heroType: "CHAMPION",
+      requiresAnyHeroNames: ["Sasquatches", "Northern Guard"],
+      specialRules: [
+        {
+          name: "Snow Horn",
+          text: "Once per battle, the Champion with Snow Horn may roll a D6 to summon a Sasquatches unit onto the battlefield. On a result of 3 or less, you may place a rank of 4 Sasquatch bases within 15 cm of the Champion and at least 5 cm away from any enemy, facing any direction, without an Action Die.",
+        },
+      ],
+    },
+    {
+      name: "Priest of Gunnar",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 14,
+      heroType: "MAGE",
+      requiresAnyHeroNames: ["Sasquatches", "Northern Guard"],
+      specialRules: [
+        {
+          name: "Priest of Gunnar",
+          text: "May buy one magic spell and up to two items of any value. (Not enforced by the app as a hard cap of one spell — the normal Mage cap of two spells still applies in the builder; keep this in mind when building his list.) In addition, Priest of Gunnar has the Intense Blizzard spell, included in his cost.",
+        },
+        {
+          name: "Intense Blizzard",
+          text: "20 cm / 4 or less. Choose target enemy unit or units within 20 cm that are not engaged in combat and perform a Magic Test. If successful, move the unit or units 5 cm forwards or backwards in a straight line.",
+        },
+      ],
+    },
+    {
+      name: "Vohdalir The Fearless",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 44,
+      heroType: "LEGENDARY_HERO",
+      specialRules: [
+        {
+          name: "Companion Etho",
+          text: "Vohdalir is a Legendary Hero who can be fielded in the Dirandis army.",
+        },
+        {
+          name: "Ancient Ancestral Axe",
+          text: "This axe, passed down through generations, allows Vohdalir and his companion Etho to grant a friendly unit they are attached to +8 attacks. Additionally, no saves are permitted against the attacks of the unit with Vohdalir attached.",
+        },
+        {
+          name: "Etho the Grim",
+          text: "This brooding Gridon may turn into a volcano of fury during combat, striking enemies with reckless abandon. If the unit with Vohdalir attached charges, roll a D6 to see if Etho goes into a frenzy. On a score of 3 or less, Etho is enraged, and you may add +D6 attacks to the unit's total. If the result is 6, roll another D6 and add those attacks as well. If you get a 6 again, roll another D6 for further additional attacks.",
+        },
+        {
+          name: "Wolf Crown",
+          text: "When attached to a unit of Wolf Maidens (Amazons) or Wilhars, Vohdalir increases their WS to 4.",
+        },
+        {
+          name: "Fear Only the Gods",
+          text: "Vohdalir attached to a friendly unit grants it Fearless.",
         },
       ],
     },
@@ -1340,6 +1502,35 @@ export const gaeldor: SeedFaction = {
         },
       ],
     },
+    {
+      name: "Mar'hauk",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 43,
+      heroType: "LEGENDARY_HERO",
+      specialRules: [
+        {
+          name: "Vitur's Rider",
+          text: "Mar'hauk is a Legendary Hero who can be fielded in the Gaeldor army. Mar'hauk mounts a powerful creature called Vitur. Thanks to Vitur, Mar'hauk grants the unit he is attached to +8 attacks.",
+        },
+        {
+          name: "Ern's Helm",
+          text: "When attached to a friendly unit that has no save, Mar'hauk allows it to benefit from the power of his helm. After being dealt Wounds by an enemy unit, a friendly unit may roll a D6 for each of up to 5 Wounds it has suffered. Each score of 2 or less means a cancelled Wound.",
+        },
+        {
+          name: "Eagle Talon",
+          text: "Forged by the blacksmiths of the Iron Oaks, this legendary sword draws its energy from the forces of nature. A friendly unit that Mar'hauk is attached to may re-roll 4 dice in the Wound Test + 1 die for each terrain on the battlefield.",
+        },
+        {
+          name: "Oaken Shield",
+          text: "This legendary shield is anointed with resin from the ancient oaks of the Forgotten Reach. If an enemy unit comes into contact with Mar'hauk, it does not roll for the hero's death. Instead, Mar'hauk may be immediately placed anywhere up to 20 cm of the enemy unit. The shield can only be used once per battle.",
+        },
+        {
+          name: "Vitur",
+          text: "This creature's anger is unstoppable. The unit that Mar'hauk on Vitur is attached to has Fear (After a successful charge with this unit, the enemy unit (but not single model) must take a Panic Test for 1 base. If this unit is a Horde, the enemy must take a Panic Test for 2 bases instead).",
+        },
+      ],
+    },
   ],
 };
 
@@ -1355,7 +1546,7 @@ export const sheolMorg: SeedFaction = {
       category: "BASIC",
       costType: "PER_BASE",
       pointsCost: 7,
-      requiresHeroName: "Lord Necromancer",
+      requiresHeroNames: ["Lord Necromancer"],
       ld: 4,
       m: 10,
       ws: 3,
@@ -1388,7 +1579,7 @@ export const sheolMorg: SeedFaction = {
       category: "BASIC",
       costType: "PER_BASE",
       pointsCost: 13,
-      requiresHeroName: "Lord of Sheol-morg",
+      requiresHeroNames: ["Lord of Sheol-morg"],
       ld: 6,
       m: 10,
       ws: 3,
@@ -1733,6 +1924,146 @@ export const sheolMorg: SeedFaction = {
         },
       ],
     },
+    {
+      name: "Champion of Ghosts",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 12,
+      heroType: "CHAMPION",
+      requiresHeroNames: ["Lord Necromancer"],
+      specialRules: [
+        {
+          name: "Skeletons Champion",
+          text: "The specific magical aura of the Skeletons Champions prevents them from attaching to any units, as doing so would disrupt their ability to effectively support the army. If an enemy unit comes into contact with such a Champion and fails to eliminate it, the Champion must be repositioned up to 15 cm away, to any location on the battlefield.",
+        },
+        {
+          name: "Unlocks Ghosts",
+          text: "An army with the Champion of Ghosts can field 1 unit of Ghosts as a Basic Unit.",
+        },
+        {
+          name: "Aura of Ghosts",
+          text: "Choose target friendly unit of Truhlaks or Ghosts within 20 cm of Champion of Ghosts and roll a D6. A score of 4 or 3 means that the chosen unit gains +1 to S. A score of 2 or less means that the chosen unit gains +1 to S and +1 to WS.",
+        },
+      ],
+    },
+    {
+      name: "Champion of Catacombs",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 15,
+      heroType: "CHAMPION",
+      requiresHeroNames: ["Lord Necromancer"],
+      specialRules: [
+        {
+          name: "Skeletons Champion",
+          text: "The specific magical aura of the Skeletons Champions prevents them from attaching to any units, as doing so would disrupt their ability to effectively support the army. If an enemy unit comes into contact with such a Champion and fails to eliminate it, the Champion must be repositioned up to 15 cm away, to any location on the battlefield.",
+        },
+        {
+          name: "Unlocks Mementors",
+          text: "An army with the Champion of Catacombs can field Mementors as Rare Units.",
+        },
+        {
+          name: "Aura of Catacombs",
+          text: "Choose target enemy unit within 30 cm of Champion of Catacombs and roll a D6. A score of 3 or less means the chosen unit must re-roll its highest result when rolling for the charge distance. Additionally, if any enemy unit within 15 cm takes a Prayer Test, it must roll 3 dice and choose the 2 highest results.",
+        },
+      ],
+    },
+    {
+      name: "Champion of Graves",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 11,
+      heroType: "CHAMPION",
+      requiresHeroNames: ["Lord Necromancer"],
+      specialRules: [
+        {
+          name: "Skeletons Champion",
+          text: "The specific magical aura of the Skeletons Champions prevents them from attaching to any units, as doing so would disrupt their ability to effectively support the army. If an enemy unit comes into contact with such a Champion and fails to eliminate it, the Champion must be repositioned up to 15 cm away, to any location on the battlefield.",
+        },
+        {
+          name: "Unlocks Gnils",
+          text: "An army with the Champion of Graves can field Gnils as Elite Units.",
+        },
+        {
+          name: "Aura of Graves",
+          text: "Choose one unit of Truhlaks or Gnils within 20 cm of Champion of Graves and roll a D6. A score of 4 or less means that the chosen unit may re-roll one D6 when rolling for the charge distance.",
+        },
+      ],
+    },
+    {
+      name: "Skeletons Command Group",
+      category: "HERO",
+      costType: "PER_BASE",
+      pointsCost: 14,
+      heroType: "COMMAND_GROUP",
+      requiresHeroNames: ["Lord Necromancer"],
+      specialRules: [
+        {
+          name: "Skeletons Command Group",
+          text: "The specific magical aura of the Skeletons Command Groups prevents them from attaching to any units, as doing so would disrupt their ability to effectively support the army. If an enemy unit comes into contact with such a Command Group and fails to eliminate it, the Command Group must be repositioned up to 15 cm away, to any location on the battlefield.",
+        },
+        {
+          name: "Aura of the Dead",
+          text: "All friendly units within 5 cm of a Skeletons Command Group may use the following rules: after declaring a charge, the unit can (even despite the difficulties or obstacles) roll 3D6 for the charge instead of the roll that it could normally make, and choose the two highest dice rolls to make the charge. The unit can make a special sideways or backwards move up to 10 cm + D6 instead of its standard move or charge. After each lost combat, the unit of Truhlaks is allowed to re-roll a D6 roll for the additional Wounds it receives (Corpse Horde).",
+        },
+      ],
+    },
+    {
+      name: "Gnat",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 57,
+      heroType: "LEGENDARY_HERO",
+      requiresHeroNames: ["Lord Necromancer"],
+      specialRules: [
+        {
+          name: "Attaches to Truhlaks",
+          text: "Gnat is a Legendary Hero who can be fielded in the Sheol-morg army led by Lord Necromancer. Gnat is allowed to attach to Truhlaks.",
+        },
+        {
+          name: "Azargal – The Axe of the Dead",
+          text: "When attached to a friendly unit, Gnat grants it +6 attacks. Furthermore, if an enemy unit is dealt a Wound during combat with the unit Gnat is attached to and is subsequently marked with a Wound, it suffers 2 further Wounds.",
+        },
+        {
+          name: "Horned Helm",
+          text: "If the unit Gnat is attached to has Fear, the enemy unit (but not single model) must always take Panic Tests for 3 bases instead of 1 or 2. In addition, once per cycle, target friendly unit of Truhlaks within 30 cm of Gnat gets the opportunity to roll a D6 after removing its Action Die. The effects last until the end of the cycle. On a 1, the unit can increase its Mobility (M) by 5 and roll again for the table (effects are cumulative). On a 2-4, the unit can increase its Strength (S) by 2. On a 5, the unit can turn with no limits. On a 6, no effect.",
+        },
+        {
+          name: "Grave Shield",
+          text: "If the unit Gnat is attached to has no save, it gains save on 1s and 2s.",
+        },
+        {
+          name: "Servant of Death",
+          text: "If Gnat is killed, remove his model and place a Death Counter in his place. At the start of each cycle, roll a D6. On a score of 3 or less, you may place the Gnat model, along with an Action Die, within 10 cm of the Death Counter, then remove the counter.",
+        },
+      ],
+    },
+    {
+      name: "Myrnos",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 40,
+      heroType: "LEGENDARY_HERO",
+      requiresHeroNames: ["Lord of Sheol-morg"],
+      specialRules: [
+        {
+          name: "Whirlwind of Madness",
+          text: "Myrnos is a Legendary Hero who can be fielded in the Sheol-morg army led by Lord of Sheol-morg. Driven by a whirlwind of madness, Myrnos always grants 5 attacks + 1 attack for each rank of the unit he is attached to.",
+        },
+        {
+          name: "Azzantir, Axe of Malice",
+          text: "This axe, imbued with a malevolent soul, clouds Myrnos's mind and drives him to madness. If an enemy unit (but not single model) loses combat against a unit Myrnos is attached to, roll four D6s before the enemy takes a Cold Blood Test. For each score of 4 or less, Myrnos inflicts 1 additional Wound on the enemy unit. Any double of 6 means that the unit Myrnos is attached to loses 1 base.",
+        },
+        {
+          name: "Hunger for Murder",
+          text: "The regrouping range of the unit Myrnos is attached to is 3D6 cm instead of 5 cm.",
+        },
+        {
+          name: "Servant's Girdle",
+          text: "If Myrnos is eliminated from battle, he does not count as a Blood Point for the opponent.",
+        },
+      ],
+    },
   ],
 };
 
@@ -1891,7 +2222,7 @@ export const erSael: SeedFaction = {
       category: "RARE",
       costType: "FLAT",
       pointsCost: 62,
-      requiresHeroName: "Black Shepherd",
+      requiresHeroNames: ["Black Shepherd"],
       ld: 4,
       m: 10,
       ws: 5,
@@ -2066,6 +2397,36 @@ export const erSael: SeedFaction = {
         {
           name: "General",
           text: "As long as General is on the battlefield, his army may use the army special rule and add General's LD during Initiative Tests. For more rules see Heroes – General.",
+        },
+      ],
+    },
+    {
+      name: "Gidrak",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 42,
+      heroType: "LEGENDARY_HERO",
+      grantsMageUpgrades: true,
+      specialRules: [
+        {
+          name: "Mage",
+          text: "Gidrak is a Mage and counts to the Mages limit in the army. May buy magic spells and items of any value.",
+        },
+        {
+          name: "Ting Chi Skull Mask",
+          text: "If the Er'Sael army ties with an enemy during the Initiative Test, it gains a +1 bonus when re-rolling.",
+        },
+        {
+          name: "Priestly Sash",
+          text: "Instead of moving normally, Gidrak may perform a special teleportation to join any friendly Priests of Sael unit on the battlefield. If the Priests of Sael unit with Gidrak attached becomes the target of an enemy spell or magic item, roll a D6. On a result of 4 or less, the spell or item is dispersed.",
+        },
+        {
+          name: "Storm Staff & Ritual Scythe",
+          text: "When Gidrak is attached to a friendly unit, he grants it +4 attacks instead of +1. Additionally, no saves are permitted against the attacks of the unit with Gidrak attached.",
+        },
+        {
+          name: "Spell Thief",
+          text: "While within 30 cm of an enemy mage, Gidrak may cast that mage's spells.",
         },
       ],
     },
@@ -2408,6 +2769,35 @@ export const vaendral: SeedFaction = {
         },
       ],
     },
+    {
+      name: "Valeria",
+      category: "HERO",
+      costType: "FLAT",
+      pointsCost: 41,
+      heroType: "LEGENDARY_HERO",
+      specialRules: [
+        {
+          name: "Andras and Iluar",
+          text: "Valeria is a Legendary Hero who can be fielded in the Vaendral army. Valeria is always accompanied by Andras and Iluar, who fight fiercely along her side in the Vaendral army. Thanks to them, Valeria grants the unit she is attached to +8 attacks.",
+        },
+        {
+          name: "The Chosen of the Bathed in Blood",
+          text: "If the friendly General has left the battlefield, Valeria immediately takes command. The army can still use the Born Warriors special rule and use Valeria's LD 2. Valeria cannot issue orders.",
+        },
+        {
+          name: "Slayer's Axe",
+          text: "When the unit Valeria is attached to is to make a Wound Test, take up to 2 dice from the pool and roll them separately. Each score of 3 or less means the enemy unit is dealt 3 Wounds.",
+        },
+        {
+          name: "Feisty Savage",
+          text: "If an enemy unit successfully charges the unit with an Action Die that Valeria is attached to, the unit may immediately remove the Action Die, position itself facing the enemy, and perform its attacks before the enemy does.",
+        },
+        {
+          name: "Skull of the Priest Esn",
+          text: "Valeria and her Priestesses defeated the High Priest Esn Ar Unrazr in battle. She keeps his skull, ground to powder, in a pouch on her belt. The power of the skull powder allows Valeria to attempt to dispel an enemy spell once per battle. A score of 3 or less means the spell has been dispelled.",
+        },
+      ],
+    },
   ],
 };
 
@@ -2457,9 +2847,15 @@ export async function seedFaction(db: PrismaClient, factionData: SeedFaction) {
           ? (unit.maxBases ?? DEFAULT_MAX_BASES)
           : null,
       heroType: unit.heroType ?? "OTHER",
-      requiresHeroName: unit.requiresHeroName ?? null,
+      requiresHeroNames: unit.requiresHeroNames ?? [],
+      requiresAnyHeroNames: unit.requiresAnyHeroNames ?? [],
+      requiresUpgradeName: unit.requiresUpgradeName ?? null,
       recategorizeGeneralName: unit.recategorizeGeneralName ?? null,
       recategorizeToCategory: unit.recategorizeToCategory ?? null,
+      maxPerPoints: unit.maxPerPoints ?? null,
+      maxCount: unit.maxCount ?? null,
+      disableMarauders: unit.disableMarauders ?? false,
+      grantsMageUpgrades: unit.grantsMageUpgrades ?? false,
       ld: unit.ld,
       m: unit.m,
       ws: unit.ws,

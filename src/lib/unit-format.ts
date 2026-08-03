@@ -5,6 +5,7 @@ export const CATEGORY_LABELS: Record<UnitCategory, string> = {
   ELITE: "Elite Units",
   RARE: "Rare Units",
   UNIQUE: "Unique Units",
+  MERCENARY: "Mercenary Units",
   HERO: "Heroes",
 };
 
@@ -13,6 +14,7 @@ export const CATEGORY_ORDER: UnitCategory[] = [
   "ELITE",
   "RARE",
   "UNIQUE",
+  "MERCENARY",
   "HERO",
 ];
 

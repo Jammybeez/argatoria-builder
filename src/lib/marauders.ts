@@ -8,7 +8,11 @@ export function getMaraudersEntries<
   T extends {
     id: string;
     quantity: number;
-    unit: { costType: string; maxBases: number | null };
+    unit: {
+      costType: string;
+      maxBases: number | null;
+      disableMarauders: boolean;
+    };
   },
 >(armyUnits: T[]) {
   return armyUnits
@@ -16,7 +20,8 @@ export function getMaraudersEntries<
       (au) =>
         au.unit.costType === "PER_BASE" &&
         au.unit.maxBases != null &&
-        au.quantity === au.unit.maxBases,
+        au.quantity === au.unit.maxBases &&
+        !au.unit.disableMarauders,
     )
     .map((au) => ({
       ...au,
