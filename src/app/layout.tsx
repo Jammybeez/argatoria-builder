@@ -7,15 +7,35 @@ import Script from "next/script";
 
 import { Nav } from "~/app/_components/nav";
 import { TRPCReactProvider } from "~/trpc/react";
+import { env } from "~/env";
 
 // Sets data-theme before hydration so there's no flash of the wrong theme:
 // stored choice wins, otherwise falls back to the OS preference.
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("theme")||(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
+const siteUrl = env.BETTER_AUTH_URL ?? "http://localhost:3000";
+const description =
+  "Browse Argatoria factions and units, then build and save army lists for the tabletop.";
+
 export const metadata: Metadata = {
-  title: "Argatoria Builder",
-  description: "Build and save Argatoria army lists",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Argatoria Builder",
+    template: "%s — Argatoria Builder",
+  },
+  description,
   icons: [{ rel: "icon", url: "/favicon.ico" }],
+  openGraph: {
+    title: "Argatoria Builder",
+    description,
+    siteName: "Argatoria Builder",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Argatoria Builder",
+    description,
+  },
 };
 
 const geist = Geist({

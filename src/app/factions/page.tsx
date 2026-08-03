@@ -1,6 +1,13 @@
+import { type Metadata } from "next";
 import Link from "next/link";
 
 import { api } from "~/trpc/server";
+
+export const metadata: Metadata = {
+  title: "Factions",
+  description:
+    "Browse every Argatoria faction — units, stats, and special rules for the tabletop.",
+};
 
 export default async function FactionsPage() {
   const factions = await api.faction.list();

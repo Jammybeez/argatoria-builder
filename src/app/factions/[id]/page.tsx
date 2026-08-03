@@ -1,4 +1,6 @@
+import { type Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { NewArmyForm } from "~/app/_components/new-army-form";
 import { UnitStatLine } from "~/app/_components/unit-stat-line";
@@ -12,6 +14,33 @@ import {
 import { getSession } from "~/server/better-auth/server";
 import { api } from "~/trpc/server";
 
+// Deduped via React's request-level cache: generateMetadata and the page
+// component below both need this, but should only hit the DB once.
+const getFaction = cache(async (id: string) =>
+  api.faction.getById({ id }).catch(() => null),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const faction = await getFaction(id);
+  if (!faction) return {};
+
+  const description = faction.tagline
+    ? `${faction.tagline} Full unit roster, stats, and special rules for ${faction.name}.`
+    : `Full unit roster, stats, and special rules for ${faction.name} in Argatoria.`;
+
+  return {
+    title: faction.name,
+    description,
+    openGraph: { title: faction.name, description },
+    twitter: { title: faction.name, description },
+  };
+}
+
 export default async function FactionPage({
   params,
 }: {
@@ -19,7 +48,7 @@ export default async function FactionPage({
 }) {
   const { id } = await params;
   const [faction, session] = await Promise.all([
-    api.faction.getById({ id }).catch(() => null),
+    getFaction(id),
     getSession(),
   ]);
 
