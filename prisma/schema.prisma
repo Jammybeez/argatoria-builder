@@ -168,6 +168,16 @@ model Unit {
   // Legendary Hero who is also explicitly a Mage.
   grantsMageUpgrades Boolean @default(false)
 
+  // Hidden from the catalog behind the "Use appendix units" toggle even
+  // though this unit belongs to a single faction (factionId isn't the
+  // dummy Appendix faction) — for heroes restricted to "a certain army"
+  // per the original appendix-unit definition, e.g. Xan'toag (Arox only)
+  // or Gnat (Sheol-morg led by Lord Necromancer). Units eligible via
+  // AppendixEligibility are always treated as appendix regardless of this
+  // flag; pre-existing same-faction conditional units (e.g. Truhlaks)
+  // stay visible by default and should NOT set this.
+  appendixOnly Boolean @default(false)
+
   // This unit's normal `category` is overridden to `recategorizeToCategory`
   // (for composition-rule counting and catalog/roster grouping) whenever a
   // GENERAL with name `recategorizeGeneralName` is in the roster, e.g. Horned

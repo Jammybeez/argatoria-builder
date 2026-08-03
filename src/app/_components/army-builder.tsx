@@ -786,13 +786,22 @@ export function ArmyBuilder({ armyId }: { armyId: string }) {
             Add Units
           </h2>
           <label className="text-parchment-dim flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={showAppendixUnits}
-              onChange={(e) => setShowAppendixUnits(e.target.checked)}
-              className="accent-bronze"
-            />
             Use appendix units
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showAppendixUnits}
+              onClick={() => setShowAppendixUnits((v) => !v)}
+              className={`relative h-5 w-9 shrink-0 rounded-full border border-brass/50 transition-colors ${
+                showAppendixUnits ? "bg-bronze" : "bg-leather"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-3.5 w-3.5 rounded-full bg-parchment transition-transform ${
+                  showAppendixUnits ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
+            </button>
           </label>
         </div>
         {factionQuery.isLoading ? (

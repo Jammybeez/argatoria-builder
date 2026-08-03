@@ -53,9 +53,13 @@ export const factionRouter = createTRPCRouter({
       return {
         ...faction,
         units: [
+          // appendixOnly covers same-faction heroes restricted to "a
+          // certain army" (e.g. Xan'toag, Gnat) — hidden behind the
+          // catalog toggle same as genuinely cross-faction units, even
+          // though they live directly on this faction's own roster.
           ...faction.units.map((u) => ({
             ...u,
-            isAppendixUnit: false as const,
+            isAppendixUnit: u.appendixOnly,
           })),
           ...appendixUnits,
         ],

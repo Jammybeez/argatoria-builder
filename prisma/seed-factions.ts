@@ -41,6 +41,13 @@ export interface SeedUnit {
   // whatever heroType already grants, e.g. a Legendary Hero who is also
   // explicitly a Mage.
   grantsMageUpgrades?: boolean;
+  // Hidden from the catalog behind "Use appendix units" even though this
+  // unit belongs to a single faction, e.g. Xan'toag (Arox only) or Gnat
+  // (Sheol-morg led by Lord Necromancer) — restricted to "a certain army"
+  // per the original appendix-unit definition. Do NOT set this on
+  // pre-existing same-faction conditional units like Truhlaks; they stay
+  // visible by default.
+  appendixOnly?: boolean;
   ld?: number;
   m?: number;
   ws?: number;
@@ -370,6 +377,7 @@ export const arox: SeedFaction = {
       costType: "FLAT",
       pointsCost: 44,
       heroType: "LEGENDARY_HERO",
+      appendixOnly: true,
       specialRules: [
         {
           name: "Armour of the Sun Cities",
@@ -708,6 +716,7 @@ export const sorgax: SeedFaction = {
       pointsCost: 49,
       heroType: "LEGENDARY_HERO",
       grantsMageUpgrades: true,
+      appendixOnly: true,
       specialRules: [
         {
           name: "Monstrous Mage",
@@ -1052,6 +1061,7 @@ export const dirandis: SeedFaction = {
       costType: "FLAT",
       pointsCost: 15,
       heroType: "CHAMPION",
+      appendixOnly: true,
       requiresAnyHeroNames: ["Sasquatches", "Northern Guard"],
       specialRules: [
         {
@@ -1066,6 +1076,7 @@ export const dirandis: SeedFaction = {
       costType: "FLAT",
       pointsCost: 13,
       heroType: "CHAMPION",
+      appendixOnly: true,
       requiresAnyHeroNames: ["Sasquatches", "Northern Guard"],
       specialRules: [
         {
@@ -1080,6 +1091,7 @@ export const dirandis: SeedFaction = {
       costType: "FLAT",
       pointsCost: 16,
       heroType: "CHAMPION",
+      appendixOnly: true,
       requiresAnyHeroNames: ["Sasquatches", "Northern Guard"],
       specialRules: [
         {
@@ -1094,6 +1106,7 @@ export const dirandis: SeedFaction = {
       costType: "FLAT",
       pointsCost: 14,
       heroType: "MAGE",
+      appendixOnly: true,
       requiresAnyHeroNames: ["Sasquatches", "Northern Guard"],
       specialRules: [
         {
@@ -1112,6 +1125,7 @@ export const dirandis: SeedFaction = {
       costType: "FLAT",
       pointsCost: 44,
       heroType: "LEGENDARY_HERO",
+      appendixOnly: true,
       specialRules: [
         {
           name: "Companion Etho",
@@ -1508,6 +1522,7 @@ export const gaeldor: SeedFaction = {
       costType: "FLAT",
       pointsCost: 43,
       heroType: "LEGENDARY_HERO",
+      appendixOnly: true,
       specialRules: [
         {
           name: "Vitur's Rider",
@@ -1930,6 +1945,7 @@ export const sheolMorg: SeedFaction = {
       costType: "FLAT",
       pointsCost: 12,
       heroType: "CHAMPION",
+      appendixOnly: true,
       requiresHeroNames: ["Lord Necromancer"],
       specialRules: [
         {
@@ -1952,6 +1968,7 @@ export const sheolMorg: SeedFaction = {
       costType: "FLAT",
       pointsCost: 15,
       heroType: "CHAMPION",
+      appendixOnly: true,
       requiresHeroNames: ["Lord Necromancer"],
       specialRules: [
         {
@@ -1974,6 +1991,7 @@ export const sheolMorg: SeedFaction = {
       costType: "FLAT",
       pointsCost: 11,
       heroType: "CHAMPION",
+      appendixOnly: true,
       requiresHeroNames: ["Lord Necromancer"],
       specialRules: [
         {
@@ -1996,6 +2014,7 @@ export const sheolMorg: SeedFaction = {
       costType: "PER_BASE",
       pointsCost: 14,
       heroType: "COMMAND_GROUP",
+      appendixOnly: true,
       requiresHeroNames: ["Lord Necromancer"],
       specialRules: [
         {
@@ -2014,6 +2033,7 @@ export const sheolMorg: SeedFaction = {
       costType: "FLAT",
       pointsCost: 57,
       heroType: "LEGENDARY_HERO",
+      appendixOnly: true,
       requiresHeroNames: ["Lord Necromancer"],
       specialRules: [
         {
@@ -2044,6 +2064,7 @@ export const sheolMorg: SeedFaction = {
       costType: "FLAT",
       pointsCost: 40,
       heroType: "LEGENDARY_HERO",
+      appendixOnly: true,
       requiresHeroNames: ["Lord of Sheol-morg"],
       specialRules: [
         {
@@ -2407,6 +2428,7 @@ export const erSael: SeedFaction = {
       pointsCost: 42,
       heroType: "LEGENDARY_HERO",
       grantsMageUpgrades: true,
+      appendixOnly: true,
       specialRules: [
         {
           name: "Mage",
@@ -2775,6 +2797,7 @@ export const vaendral: SeedFaction = {
       costType: "FLAT",
       pointsCost: 41,
       heroType: "LEGENDARY_HERO",
+      appendixOnly: true,
       specialRules: [
         {
           name: "Andras and Iluar",
@@ -2856,6 +2879,7 @@ export async function seedFaction(db: PrismaClient, factionData: SeedFaction) {
       maxCount: unit.maxCount ?? null,
       disableMarauders: unit.disableMarauders ?? false,
       grantsMageUpgrades: unit.grantsMageUpgrades ?? false,
+      appendixOnly: unit.appendixOnly ?? false,
       ld: unit.ld,
       m: unit.m,
       ws: unit.ws,
